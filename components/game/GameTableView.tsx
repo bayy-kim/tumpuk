@@ -40,8 +40,18 @@ export default function GameTableView({
   showTumpukPulse,
 }: GameTableViewProps) {
   const isMyTurn = currentUserId === activePlayerId;
-  const timeRemaining = Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000));
+  const [timeRemaining, setTimeRemaining] = useState(() => 
+    Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000))
+  );
   const [isDragOverDiscard, setIsDragOverDiscard] = useState(false);
+
+  React.useEffect(() => {
+    const calc = () => Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000));
+    const interval = setInterval(() => {
+      setTimeRemaining(calc());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [turnDeadline]);
 
   const colorTextMap = {
     red: 'text-red-500',

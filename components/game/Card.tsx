@@ -22,14 +22,6 @@ const colorMap = {
   wild: 'bg-zinc-800 border-zinc-950 text-white',
 };
 
-const textColors = {
-  red: 'text-red-100',
-  yellow: 'text-yellow-900',
-  green: 'text-green-100',
-  blue: 'text-blue-100',
-  wild: 'text-zinc-300',
-};
-
 export default function Card({
   card,
   onClick,
@@ -39,7 +31,7 @@ export default function Card({
   isBack = false,
   angle = 0,
 }: CardProps) {
-  const handleDragStart = (e: any) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     if (!isPlayable) return;
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', card.id);
@@ -93,7 +85,7 @@ export default function Card({
       whileTap={isPlayable && onClick ? { scale: 0.95 } : {}}
       onClick={isPlayable ? onClick : undefined}
       draggable={isPlayable}
-      onDragStart={handleDragStart}
+      onDragStartCapture={handleDragStart}
       className={`w-16 h-24 rounded-xl border-4 border-white shadow-lg flex flex-col items-center justify-between p-2 relative overflow-hidden select-none shrink-0 cursor-pointer ${colorClass} ${
         !isPlayable ? 'opacity-60 cursor-not-allowed' : ''
       } ${className}`}

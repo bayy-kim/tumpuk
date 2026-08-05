@@ -52,28 +52,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [scores, setScores] = useState<{ playerId: string; score: number }[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [guestName, setGuestName] = useState<string>('');
-  const [turnSecondsLeft, setTurnSecondsLeft] = useState<number>(20);
+  const [turnSecondsLeft, setTurnSecondsLeft] = useState<number>(0);
 
   // Auto-calculate seconds remaining from turnDeadline
   useEffect(() => {
-    if (!gameState || !gameState.turnDeadline || roomStatus !== 'playing') {
-      setTurnSecondsLeft(0);
-      return;
-    }
-
     const calculateTimeLeft = () => {
+      if (!gameState || !gameState.turnDeadline || roomStatus !== 'playing') {
+        return 0;
+      }
       const msLeft = gameState.turnDeadline - Date.now();
       return Math.max(0, Math.ceil(msLeft / 1000));
     };
 
-    setTurnSecondsLeft(calculateTimeLeft());
-
     const interval = setInterval(() => {
-      const remaining = calculateTimeLeft();
-      setTurnSecondsLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(interval);
-      }
+      setTurnSecondsLeft(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(interval);
@@ -101,25 +93,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const myHand = gameState?.you.hand || [];
   const opponents = gameState?.opponents || [];
   const currentColor = gameState?.currentColor || 'wild';
-  
-  // Calculate isMyTurn
-  const isMyTurn = (() => {
-    if (!gameState || roomStatus !== 'playing') return false;
-    // Map current index of play to player lists
-    const activePlayer = gameState.opponents[gameState.currentPlayerIndex - 1] || gameState.you;
-    if (gameState.currentPlayerIndex === 0) {
-      return gameState.you.id === currentUserId;
-    }
-    // If the index matches you or player ID
-    return false; // Will be properly driven by server index compared to client id
-  })();
-
-  const computedIsMyTurn = gameState ? (
-    gameState.currentPlayerIndex === 0 && gameState.you.id === currentUserId
-  ) || (
-    // Fallback if index references opponent IDs
-    false
-  ) : false;
 
   // Let's refine isMyTurn selection to correctly match player ID
   const resolvedIsMyTurn = gameState

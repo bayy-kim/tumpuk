@@ -7,7 +7,6 @@ import {
   PlayerPublicState,
   PlayerSelfState,
   PlayerState,
-  PublicGameState,
   ServerEvent,
 } from "../lib/events";
 
@@ -98,7 +97,7 @@ export default class GameServer implements Party.Server {
     };
   }
 
-  onConnect(conn: Party.Connection) {
+  onConnect() {
     // Handled in join_room message
   }
 
@@ -132,7 +131,7 @@ export default class GameServer implements Party.Server {
 
     switch (event.type) {
       case "join_room": {
-        const { code, guestName } = event.payload;
+        const { guestName } = event.payload;
 
         // Clear disconnect timer if reconnecting
         if (this.disconnectTimers.has(senderId)) {

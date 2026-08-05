@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import LobbyView from '@/components/game/LobbyView';
 import GameTableView from '@/components/game/GameTableView';
 import EndScreenView from '@/components/game/EndScreenView';
 import ColorPickerBottomSheet from '@/components/game/ColorPickerBottomSheet';
 import { GameProvider, useGameStore } from '@/lib/GameContext';
 import usePartySocket from '@/lib/usePartySocket';
-import { CardColor, HouseRules, ServerEvent } from '@/lib/events';
+import { CardColor, ServerEvent } from '@/lib/events';
 
 function RoomContainer({ roomCode }: { roomCode: string }) {
   const {
@@ -31,8 +31,6 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     myHand,
     opponents,
     currentColor,
-    isMyTurn,
-    turnSecondsLeft,
   } = useGameStore();
 
   const [inputGuestName, setInputGuestName] = useState('');
@@ -42,7 +40,6 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
 
   // Initialize socket connection
   const {
-    isConnected,
     startGame,
     playCard,
     drawCard,
@@ -175,7 +172,7 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
           currentColor={currentColor}
           deckCount={64}
           drawStack={gameState?.drawStack || 0}
-          turnDeadline={gameState?.turnDeadline || Date.now() + 20000}
+          turnDeadline={gameState?.turnDeadline || 0}
           hand={myHand}
           currentUserId={currentUserId}
           onPlayCard={handlePlayCard}
