@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🃏 Tumpuk! — Real-time Multiplayer Card Game
 
-## Getting Started
+"Tumpuk!" adalah game kartu multiplayer online real-time 2–6 pemain bergaya UNO dengan karya seni maskot kartun slime yang lucu. Game ini dibuat menggunakan arsitektur hybrid modern: Next.js untuk antarmuka web & autentikasi, PartyKit (Cloudflare Durable Objects) untuk authoritative game server real-time via WebSocket, dan Neon (Postgres) untuk penyimpanan persistent.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🌟 Fitur Utama
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 🎮 **Multiplayer Real-time**: Didukung PartyKit dengan sinkronisasi state game di bawah 100ms.
+- 🔒 **Prinsip Zero Hand Leak**: Server hanya mengirimkan detail kartu ke pemiliknya saja. Pemain lawan hanya dapat melihat jumlah kartu (`handCount`), menjamin tidak ada manipulasi DevTools.
+- 🏠 **House Rules Kustom**: Host room dapat mengaktifkan aturan rumah seperti *Stacking (+2/+4)*, *Jump-In*, *7-0 Rule*, dan *Draw-To-Match*.
+- 📱 **Mobile-First & Desktop Friendly**: Antarmuka responsif yang nyaman dimainkan di smartphone maupun laptop dengan *drag-and-drop* & *circular opponent layout*.
+- 🔑 **Autentikasi & Guest Play**: Dapat dimainkan secara instan sebagai Guest atau login menggunakan Google Auth (NextAuth.js v5).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Perintah Utama (Scripts)
 
-## Learn More
+| Perintah | Deskripsi |
+|---|---|
+| `npm run dev` | Menjalankan server Next.js lokal di `http://localhost:3000` |
+| `npm run build` | Melakukan kompilasi produksi Next.js |
+| `npm run party:dev` | Menjalankan server game lokal PartyKit |
+| `npm run party:deploy` | Mempublikasikan server PartyKit ke Cloudflare |
+| `npx prisma db push` | Sinkronisasi schema Prisma ke database Postgres (Neon) |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Stack Teknologi
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Framer Motion
+- **Game Server Real-time**: PartyKit, PartySocket
+- **Database & ORM**: Neon Serverless Postgres, Prisma ORM 7
+- **Autentikasi**: NextAuth.js v5 (Google Provider)
+- **Deployment**: Vercel (Frontend & Web API)
