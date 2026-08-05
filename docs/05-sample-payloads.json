@@ -1,0 +1,134 @@
+{
+  "client_events": {
+    "join_room": {
+      "type": "join_room",
+      "payload": {
+        "code": "123456",
+        "userId": "user_abc123",
+        "guestName": "Budi"
+      }
+    },
+    "start_game": {
+      "type": "start_game",
+      "payload": {}
+    },
+    "play_card": {
+      "type": "play_card",
+      "payload": {
+        "cardId": "red-7-a",
+        "chosenColor": "red"
+      }
+    },
+    "draw_card": {
+      "type": "draw_card",
+      "payload": {}
+    },
+    "call_tumpuk": {
+      "type": "call_tumpuk",
+      "payload": {}
+    },
+    "challenge_tumpuk": {
+      "type": "challenge_tumpuk",
+      "payload": {
+        "targetPlayerId": "player_ Rani"
+      }
+    },
+    "leave_room": {
+      "type": "leave_room",
+      "payload": {}
+    }
+  },
+  "server_events": {
+    "room_update": {
+      "type": "room_update",
+      "payload": {
+        "players": [
+          { "id": "user_abc123", "name": "Budi", "connected": true, "isHost": true },
+          { "id": "user_xyz789", "name": "Dimas", "connected": true, "isHost": false },
+          { "id": "guest_456", "name": "Rani", "connected": false, "isHost": false }
+        ],
+        "hostId": "user_abc123",
+        "status": "playing",
+        "houseRules": {
+          "stacking": true,
+          "jumpIn": false,
+          "sevenZero": true,
+          "drawToMatch": true
+        }
+      }
+    },
+    "game_state_personalized_for_budi": {
+      "type": "game_state",
+      "payload": {
+        "roomId": "123456",
+        "you": {
+          "id": "user_abc123",
+          "hand": [
+            { "id": "red-7-a", "color": "red", "type": "number", "value": 7 },
+            { "id": "wild-2", "color": "wild", "type": "wild" }
+          ]
+        },
+        "opponents": [
+          { "id": "user_xyz789", "name": "Dimas", "handCount": 6, "connected": true, "calledTumpuk": false },
+          { "id": "guest_456", "name": "Rani", "handCount": 1, "connected": true, "calledTumpuk": true }
+        ],
+        "discardTop": { "id": "blue-4-b", "color": "blue", "type": "number", "value": 4 },
+        "currentColor": "blue",
+        "currentPlayerIndex": 0,
+        "direction": 1,
+        "turnDeadline": 1754467200000,
+        "drawStack": 0
+      }
+    },
+    "game_state_personalized_for_dimas": {
+      "type": "game_state",
+      "payload": {
+        "roomId": "123456",
+        "you": {
+          "id": "user_xyz789",
+          "hand": [
+            { "id": "green-skip-a", "color": "green", "type": "skip" },
+            { "id": "yellow-3-a", "color": "yellow", "type": "number", "value": 3 },
+            { "id": "blue-reverse-a", "color": "blue", "type": "reverse" },
+            { "id": "red-2-b", "color": "red", "type": "number", "value": 2 },
+            { "id": "wild4-1", "color": "wild", "type": "wild4" },
+            { "id": "green-5-a", "color": "green", "type": "number", "value": 5 }
+          ]
+        },
+        "opponents": [
+          { "id": "user_abc123", "name": "Budi", "handCount": 2, "connected": true, "calledTumpuk": false },
+          { "id": "guest_456", "name": "Rani", "handCount": 1, "connected": true, "calledTumpuk": true }
+        ],
+        "discardTop": { "id": "blue-4-b", "color": "blue", "type": "number", "value": 4 },
+        "currentColor": "blue",
+        "currentPlayerIndex": 0,
+        "direction": 1,
+        "turnDeadline": 1754467200000,
+        "drawStack": 0
+      }
+    },
+    "invalid_move": {
+      "type": "invalid_move",
+      "payload": {
+        "reason": "Bukan giliranmu saat ini! Giliran saat ini: Dimas."
+      }
+    },
+    "turn_timeout": {
+      "type": "turn_timeout",
+      "payload": {
+        "playerId": "user_xyz789"
+      }
+    },
+    "game_over": {
+      "type": "game_over",
+      "payload": {
+        "winnerId": "guest_456",
+        "scores": [
+          { "playerId": "guest_456", "score": 120 },
+          { "playerId": "user_abc123", "score": 0 },
+          { "playerId": "user_xyz789", "score": 0 }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  avatarUrl     String?
+  email         String?       @unique
+  provider      String        // "google" | "guest"
+  createdAt     DateTime      @default(now())
+  matches       MatchPlayer[]
+  hostedRooms   Room[]        @relation("HostedRooms")
+  wonMatches    Match[]       @relation("WonMatches")
+}
+
+model Room {
+  id            String     @id @default(uuid())
+  code          String     @unique // 6 digit
+  hostUserId    String
+  host          User       @relation("HostedRooms", fields: [hostUserId], references: [id])
+  status        RoomStatus @default(WAITING)
+  houseRules    Json       // { stacking: bool, jumpIn: bool, sevenZero: bool, drawToMatch: bool }
+  maxPlayers    Int        @default(6)
+  createdAt     DateTime   @default(now())
+  matches       Match[]
+}
+
+model Match {
+  id            String        @id @default(uuid())
+  roomId        String
+  room          Room          @relation(fields: [roomId], references: [id])
+  winnerId      String?
+  winner        User?         @relation("WonMatches", fields: [winnerId], references: [id])
+  startedAt     DateTime      @default(now())
+  endedAt       DateTime?
+  players       MatchPlayer[]
+}
+
+model MatchPlayer {
+  id            String   @id @default(uuid())
+  matchId       String
+  match         Match    @relation(fields: [matchId], references: [id])
+  userId        String?
+  guestName     String?
+  user          User?    @relation(fields: [userId], references: [id])
+  finalHandSize Int      // 0 kalau menang
+  scoreDelta    Int      // poin dari sisa kartu lawan (kalau menang)
+  seatIndex     Int
+}

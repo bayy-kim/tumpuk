@@ -1,0 +1,4 @@
+{
+  "name": "tumpuk-party",
+  "main": "party/server.ts"
+}
