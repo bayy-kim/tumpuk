@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import LobbyView from '@/components/game/LobbyView';
 import GameTableView from '@/components/game/GameTableView';
 import EndScreenView from '@/components/game/EndScreenView';
@@ -33,10 +33,30 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     currentColor,
   } = useGameStore();
 
-  const [inputGuestName, setInputGuestName] = useState('');
-  const [hasJoined, setHasJoined] = useState(false);
+  const [inputGuestName, setInputGuestName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.sessionStorage.getItem('tumpuk_player_name') || '';
+    }
+    return '';
+  });
+
+  const [hasJoined, setHasJoined] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Boolean(window.sessionStorage.getItem('tumpuk_player_name'));
+    }
+    return false;
+  });
+
   const [selectedCardIdForWild, setSelectedCardIdForWild] = useState<string | null>(null);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+
+  // Initialize identity if guest name was stored
+  useEffect(() => {
+    if (inputGuestName && !currentUserId) {
+      const tempId = `usr_${Math.random().toString(36).substring(2, 9)}`;
+      setIdentity(tempId, inputGuestName);
+    }
+  }, [inputGuestName, currentUserId, setIdentity]);
 
   // Initialize socket connection
   const {
