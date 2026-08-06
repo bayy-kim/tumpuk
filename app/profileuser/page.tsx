@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth, signOut } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { MatchPlayer } from '@prisma/client';
 
 export default async function ProfileUserPage() {
   const session = await auth();
@@ -31,7 +30,7 @@ export default async function ProfileUserPage() {
   });
 
   const totalMatches = userMatches.length;
-  const wins = userMatches.filter((m: MatchPlayer & { match: { winnerId: string | null } }) => m.match.winnerId === user.id).length;
+  const wins = userMatches.filter((m: { match: { winnerId: string | null } }) => m.match.winnerId === user.id).length;
   const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0;
 
   return (
@@ -136,7 +135,7 @@ export default async function ProfileUserPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {userMatches.map((m: MatchPlayer & { match: { winnerId: string | null; startedAt: Date; room: { code: string } } }) => {
+              {userMatches.map((m: { id: string; scoreDelta: number; match: { winnerId: string | null; startedAt: Date; room: { code: string } } }) => {
                 const isWinner = m.match.winnerId === user.id;
 
                 return (
