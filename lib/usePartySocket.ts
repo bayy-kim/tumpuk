@@ -15,7 +15,7 @@ interface UsePartySocketOptions {
 
 export function usePartySocket({
   roomCode,
-  host = typeof window !== 'undefined' ? window.location.host : 'localhost:1999',
+  host,
   userId,
   guestName,
   isSpectator = false,
@@ -33,8 +33,24 @@ export function usePartySocket({
   useEffect(() => {
     if (!roomCode) return;
 
-    // Use environment variable if present, otherwise default to host parameter or local development host
-    const partyHost = process.env.NEXT_PUBLIC_PARTYKIT_HOST || host;
+    // Resolve target PartyKit host:
+    // 1. Explicit NEXT_PUBLIC_PARTYKIT_HOST if specified
+    // 2. Local development fallback (port 1999) if running on localhost
+    // 3. Deployed default fallback host
+    let partyHost = process.env.NEXT_PUBLIC_PARTYKIT_HOST || host;
+
+    if (!partyHost && typeof window !== 'undefined') {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocalhost) {
+        partyHost = 'localhost:1999';
+      } else {
+        partyHost = 'tumpuk-party.bayy-kim.partykit.dev';
+      }
+    }
+
+    if (!partyHost) {
+      partyHost = 'localhost:1999';
+    }
 
     const socket = new PartySocket({
       host: partyHost,
