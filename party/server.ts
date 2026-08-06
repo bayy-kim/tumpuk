@@ -128,14 +128,15 @@ export default class GameServer implements Party.Server {
 
     switch (event.type) {
       case "join_room": {
-        const { guestName } = event.payload;
+        const { userId, guestName } = event.payload;
+        const actualPlayerId = userId || senderId;
 
-        if (this.disconnectTimers.has(senderId)) {
-          clearTimeout(this.disconnectTimers.get(senderId)!);
-          this.disconnectTimers.delete(senderId);
+        if (this.disconnectTimers.has(actualPlayerId)) {
+          clearTimeout(this.disconnectTimers.get(actualPlayerId)!);
+          this.disconnectTimers.delete(actualPlayerId);
         }
 
-        let player = this.state.players.find((p) => p.id === senderId);
+        let player = this.state.players.find((p) => p.id === actualPlayerId || p.id === senderId);
 
         if (!player) {
           if (this.state.players.length >= 6) {
@@ -146,7 +147,7 @@ export default class GameServer implements Party.Server {
           const isHost = this.state.players.length === 0;
 
           player = {
-            id: senderId,
+            id: actualPlayerId,
             name: guestName || `Pemain ${this.state.players.length + 1}`,
             hand: [],
             connected: true,
@@ -155,6 +156,7 @@ export default class GameServer implements Party.Server {
           };
           this.state.players.push(player);
         } else {
+          player.id = actualPlayerId;
           player.connected = true;
         }
 
