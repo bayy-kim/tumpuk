@@ -21,6 +21,7 @@ interface GameTableViewProps {
   onCallTumpuk: () => void;
   onChallengeTumpuk: (targetPlayerId: string) => void;
   showTumpukPulse: boolean;
+  isSpectator?: boolean;
 }
 
 export default function GameTableView({
@@ -38,6 +39,7 @@ export default function GameTableView({
   onCallTumpuk,
   onChallengeTumpuk,
   showTumpukPulse,
+  isSpectator = false,
 }: GameTableViewProps) {
   const isMyTurn = currentUserId === activePlayerId;
   const [timeRemaining, setTimeRemaining] = useState(() => 
@@ -63,7 +65,7 @@ export default function GameTableView({
 
   // Drag and Drop handlers for discard zone
   const handleDragOver = (e: React.DragEvent) => {
-    if (!isMyTurn) return;
+    if (!isMyTurn || isSpectator) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setIsDragOverDiscard(true);
@@ -74,7 +76,7 @@ export default function GameTableView({
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    if (!isMyTurn) return;
+    if (!isMyTurn || isSpectator) return;
     e.preventDefault();
     setIsDragOverDiscard(false);
     const cardId = e.dataTransfer.getData('text/plain');
@@ -177,9 +179,9 @@ export default function GameTableView({
           {/* Deck (Tap to draw) */}
           <div className="flex flex-col items-center gap-2">
             <div
-              onClick={isMyTurn ? onDrawCard : undefined}
+              onClick={isMyTurn && !isSpectator ? onDrawCard : undefined}
               className={`w-16 h-24 lg:w-20 lg:h-30 rounded-xl border-4 border-white shadow-xl bg-zinc-800 flex items-center justify-center relative overflow-hidden select-none shrink-0 cursor-pointer ${
-                isMyTurn ? 'hover:scale-105 active:scale-95 transition-all' : 'opacity-70 cursor-not-allowed'
+                isMyTurn && !isSpectator ? 'hover:scale-105 active:scale-95 transition-all' : 'opacity-70 cursor-not-allowed'
               }`}
             >
               <div className="absolute inset-2 border-2 border-dashed border-zinc-600 rounded-lg flex items-center justify-center">
@@ -208,30 +210,32 @@ export default function GameTableView({
         </div>
 
         {/* Floating actions (TUMPUK! / challenge) */}
-        <div className="flex gap-4 w-full justify-center mt-2 px-4 z-10">
-          {opponents.some(op => op.handCount === 1 && !op.calledTumpuk) && (
-            <button
-              onClick={() => {
-                const target = opponents.find(op => op.handCount === 1 && !op.calledTumpuk);
-                if (target) onChallengeTumpuk(target.id);
-              }}
-              className="h-12 flex-1 max-w-[140px] bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border border-red-500"
-            >
-              CHALLENGE!
-            </button>
-          )}
+        {!isSpectator && (
+          <div className="flex gap-4 w-full justify-center mt-2 px-4 z-10">
+            {opponents.some(op => op.handCount === 1 && !op.calledTumpuk) && (
+              <button
+                onClick={() => {
+                  const target = opponents.find(op => op.handCount === 1 && !op.calledTumpuk);
+                  if (target) onChallengeTumpuk(target.id);
+                }}
+                className="h-12 flex-1 max-w-[140px] bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border border-red-500 cursor-pointer"
+              >
+                CHALLENGE!
+              </button>
+            )}
 
-          <button
-            onClick={onCallTumpuk}
-            className={`h-12 flex-1 max-w-[140px] text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border-2 border-white/10 ${
-              showTumpukPulse
-                ? 'bg-yellow-400 animate-pulse border-yellow-300'
-                : 'bg-zinc-800 text-zinc-300 border-zinc-700'
-            }`}
-          >
-            TUMPUK!
-          </button>
-        </div>
+            <button
+              onClick={onCallTumpuk}
+              className={`h-12 flex-1 max-w-[140px] text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border-2 border-white/10 cursor-pointer ${
+                showTumpukPulse
+                  ? 'bg-yellow-400 animate-pulse border-yellow-300'
+                  : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+              }`}
+            >
+              TUMPUK!
+            </button>
+          </div>
+        )}
 
         {/* Timer Bar */}
         {isMyTurn && (
@@ -249,8 +253,17 @@ export default function GameTableView({
         )}
       </div>
 
-      {/* 3. Bottom Player Hand strip */}
-      <PlayerHand hand={hand} onPlayCard={onPlayCard} isMyTurn={isMyTurn} />
+      {/* 3. Bottom Player Hand strip or Spectator Notice */}
+      {isSpectator ? (
+        <div className="w-full bg-zinc-900 border-t border-zinc-800 p-4 shrink-0 flex items-center justify-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
+          <span className="text-zinc-300 text-xs font-black uppercase tracking-wider">
+            KAMU SEDANG MEMANTAU PERMAINAN (MODE WASIT / SPEKTATOR)
+          </span>
+        </div>
+      ) : (
+        <PlayerHand hand={hand} onPlayCard={onPlayCard} isMyTurn={isMyTurn} />
+      )}
     </div>
   );
 }

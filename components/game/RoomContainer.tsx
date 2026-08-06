@@ -210,6 +210,7 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
           onCallTumpuk={callTumpuk}
           onChallengeTumpuk={challengeTumpuk}
           showTumpukPulse={myHand.length <= 2}
+          isSpectator={isSpectator}
         />
       ) : (
         /* End Screen View */

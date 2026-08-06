@@ -514,6 +514,8 @@ export default class GameServer implements Party.Server {
     let selectedLoserId = winnerId;
 
     this.state.players.forEach((player) => {
+      if (player.isSpectator) return; // Skip spectator players from calculations
+      
       let playerPoints = 0;
       if (player.id !== winnerId) {
         player.hand.forEach((card) => {
@@ -549,6 +551,19 @@ export default class GameServer implements Party.Server {
     };
 
     this.room.broadcast(JSON.stringify(gameOverPayload));
+
+    // Save match result to Postgres DB using HTTP fetch callback
+    const hostUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tumpuk.vercel.app";
+    fetch(`${hostUrl}/api/match/record`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId: this.state.roomId,
+        winnerId,
+        scores: finalScores,
+        houseRules: this.state.houseRules,
+      }),
+    }).catch((e) => console.error("Failed to persist match record to Postgres:", e));
 
     // Start 10-second Challenge Poll timer
     const loser = this.state.players.find((p) => p.id === selectedLoserId) || { id: selectedLoserId, name: "Pecundang" };

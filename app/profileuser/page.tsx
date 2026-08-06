@@ -3,15 +3,35 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth, signOut } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export default async function ProfileUserPage() {
   const session = await auth();
 
-  if (!session?.user) {
+  if (!session?.user || !session.user.id) {
     redirect('/');
   }
 
   const { user } = session;
+
+  // Fetch real match histories and scores from Neon/Postgres via Prisma
+  const userMatches = await prisma.matchPlayer.findMany({
+    where: { userId: user.id },
+    include: {
+      match: {
+        include: {
+          room: true,
+        },
+      },
+    },
+    orderBy: {
+      id: 'desc',
+    },
+  });
+
+  const totalMatches = userMatches.length;
+  const wins = userMatches.filter((m) => m.match.winnerId === user.id).length;
+  const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col font-sans select-none relative overflow-x-hidden">
@@ -87,19 +107,19 @@ export default async function ProfileUserPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-1 text-center sm:text-left">
             <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">TOTAL MATCH</span>
-            <span className="text-3xl font-black text-white">24</span>
+            <span className="text-3xl font-black text-white">{totalMatches}</span>
             <span className="text-[10px] text-zinc-400 font-bold">Ronde Dimainkan</span>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-1 text-center sm:text-left">
             <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">KEMENANGAN</span>
-            <span className="text-3xl font-black text-yellow-400">18</span>
+            <span className="text-3xl font-black text-yellow-400">{wins}</span>
             <span className="text-[10px] text-zinc-400 font-bold">Juara 1 Ronde</span>
           </div>
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-1 text-center sm:text-left">
             <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">WIN RATE</span>
-            <span className="text-3xl font-black text-green-400">75%</span>
+            <span className="text-3xl font-black text-green-400">{winRate}%</span>
             <span className="text-[10px] text-zinc-400 font-bold">Persentase Menang</span>
           </div>
         </div>
@@ -109,35 +129,51 @@ export default async function ProfileUserPage() {
           <h3 className="text-white text-xs font-black tracking-wider uppercase text-left">
             RIWAYAT MATCH TERAKHIR
           </h3>
-          <div className="flex flex-col gap-3">
-            {[
-              { id: '1', mode: 'Room 6 Digit (#123456)', result: 'MENANG', points: '+120', time: '10 menit lalu' },
-              { id: '2', mode: 'Room 6 Digit (#884920)', result: 'KALAH', points: '0', time: '1 jam lalu' },
-              { id: '3', mode: 'Room 6 Digit (#552109)', result: 'MENANG', points: '+95', time: 'Yesterday' },
-            ].map((match) => (
-              <div
-                key={match.id}
-                className="flex items-center justify-between p-3.5 bg-zinc-950 border border-zinc-800/80 rounded-xl"
-              >
-                <div className="flex flex-col text-left">
-                  <span className="text-white text-xs font-black">{match.mode}</span>
-                  <span className="text-[10px] text-zinc-500 font-bold">{match.time}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
-                      match.result === 'MENANG'
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
+          {userMatches.length === 0 ? (
+            <div className="text-zinc-500 text-xs py-8 text-center uppercase font-black">
+              Belum ada riwayat pertandingan
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {userMatches.map((m) => {
+                const isWinner = m.match.winnerId === user.id;
+
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between p-3.5 bg-zinc-950 border border-zinc-800/80 rounded-xl"
                   >
-                    {match.result}
-                  </span>
-                  <span className="text-xs font-black text-white w-12 text-right">{match.points}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-white text-xs font-black">
+                        Room 6 Digit (#{m.match.room.code})
+                      </span>
+                      <span className="text-[10px] text-zinc-500 font-bold">
+                        {new Date(m.match.startedAt).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                          isWinner
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            : 'bg-zinc-800 text-zinc-400'
+                        }`}
+                      >
+                        {isWinner ? 'MENANG' : 'KALAH'}
+                      </span>
+                      <span className="text-xs font-black text-white w-12 text-right">
+                        {isWinner ? `+${m.scoreDelta}` : '0'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 
