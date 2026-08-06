@@ -9,7 +9,6 @@ interface LandingHeroProps {
 }
 
 export default function LandingHero({ actionForm }: LandingHeroProps) {
-  // Stagger wrapper for heading
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -37,76 +36,79 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
       <div className="absolute bottom-10 right-10 w-64 h-64 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-4xl flex flex-col items-center text-center gap-8 relative z-10">
-        {/* Animated card teaser fan */}
-        <div className="flex gap-4 justify-center items-center h-44 relative">
+        {/* Animated 3D card teaser fan */}
+        <div className="flex gap-4 justify-center items-center h-44 relative [perspective:1000px]">
+          {/* Card 1: Red Card */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: -25, x: -30 }}
+            initial={{ opacity: 0, scale: 0.8, rotate: -12, x: -30 }}
             animate={{
               opacity: 1,
               scale: 1,
-              rotate: [-12, 348, -12], // Putar 360 derajat bergantian
+              rotateY: [0, 360, 0], // Rotasi 3D ke samping
               y: [0, -6, 0],
             }}
             transition={{
-              rotate: {
+              rotateY: {
                 repeat: Infinity,
-                duration: 6,
+                duration: 4,
                 ease: 'easeInOut',
                 delay: 0,
-                repeatDelay: 4, // Berhenti sejenak sebelum berputar lagi
+                repeatDelay: 4, // Jeda sebelum giliran berputar lagi
               },
               y: { repeat: Infinity, duration: 4, ease: 'easeInOut' },
               default: { duration: 0.8, ease: 'easeOut' },
             }}
-            className="w-16 h-24 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative"
+            className="w-16 h-24 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative rotate-[-12deg] [transform-style:preserve-3d]"
           >
             <Image src="/cards/red_base.png" alt="Red Card" fill className="object-cover" sizes="96px" />
           </motion.div>
 
+          {/* Card 2: Wild Card */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 0, y: 20 }}
+            initial={{ opacity: 0, scale: 0.8, rotate: -2, y: 20 }}
             animate={{
               opacity: 1,
               scale: 1.05,
-              rotate: [-2, 358, -2], // Putar 360 derajat bergantian
+              rotateY: [0, 360, 0], // Rotasi 3D ke samping
               y: [0, -10, 0],
             }}
             transition={{
-              rotate: {
+              rotateY: {
                 repeat: Infinity,
-                duration: 6,
+                duration: 4,
                 ease: 'easeInOut',
-                delay: 2.5, // Bergantian (delay setelah kartu pertama berputar)
+                delay: 2, // Berputar bergantian setelah kartu 1 selesai
                 repeatDelay: 4,
               },
               y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut', delay: 0.5 },
               default: { duration: 0.8, ease: 'easeOut', delay: 0.1 },
             }}
-            className="w-18 h-28 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative z-10"
+            className="w-18 h-28 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative z-10 rotate-[-2deg] [transform-style:preserve-3d]"
           >
             <Image src="/cards/wild_base.png" alt="Wild Card" fill className="object-cover" sizes="100px" />
           </motion.div>
 
+          {/* Card 3: Blue Card */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 25, x: 30 }}
+            initial={{ opacity: 0, scale: 0.8, rotate: 10, x: 30 }}
             animate={{
               opacity: 1,
               scale: 1,
-              rotate: [10, 370, 10], // Putar 360 derajat bergantian
+              rotateY: [0, 360, 0], // Rotasi 3D ke samping
               y: [0, -7, 0],
             }}
             transition={{
-              rotate: {
+              rotateY: {
                 repeat: Infinity,
-                duration: 6,
+                duration: 4,
                 ease: 'easeInOut',
-                delay: 5, // Bergantian (delay setelah kartu kedua selesai)
+                delay: 4, // Berputar bergantian setelah kartu 2 selesai
                 repeatDelay: 4,
               },
               y: { repeat: Infinity, duration: 4.2, ease: 'easeInOut', delay: 0.2 },
               default: { duration: 0.8, ease: 'easeOut' },
             }}
-            className="w-16 h-24 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative"
+            className="w-16 h-24 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative rotate-[10deg] [transform-style:preserve-3d]"
           >
             <Image src="/cards/blue_base.png" alt="Blue Card" fill className="object-cover" sizes="96px" />
           </motion.div>
