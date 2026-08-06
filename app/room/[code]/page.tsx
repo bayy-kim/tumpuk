@@ -1,6 +1,6 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
 import LobbyView from '@/components/game/LobbyView';
 import GameTableView from '@/components/game/GameTableView';
 import EndScreenView from '@/components/game/EndScreenView';
@@ -9,7 +9,14 @@ import { GameProvider, useGameStore } from '@/lib/GameContext';
 import usePartySocket from '@/lib/usePartySocket';
 import { CardColor, HouseRules, ServerEvent } from '@/lib/events';
 
-function RoomContainer({ roomCode }: { roomCode: string }) {
+interface RoomContainerProps {
+  roomCode: string;
+  userId: string;
+  userName: string;
+}
+
+// Client Component to handle live game communication
+function RoomContainer({ roomCode, userId, userName }: RoomContainerProps) {
   const {
     gameState,
     roomPlayers,
@@ -19,7 +26,6 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     winnerId,
     scores,
     currentUserId,
-    guestName,
     loserId,
     loserName,
     pollDeadline,
@@ -41,30 +47,13 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     currentColor,
   } = useGameStore();
 
-  const [inputGuestName, setInputGuestName] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.sessionStorage.getItem('tumpuk_player_name') || '';
-    }
-    return '';
-  });
+  const [selectedCardIdForWild, setSelectedCardIdForWild] = React.useState<string | null>(null);
+  const [isColorPickerOpen, setIsColorPickerOpen] = React.useState(false);
 
-  const [hasJoined, setHasJoined] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return Boolean(window.sessionStorage.getItem('tumpuk_player_name'));
-    }
-    return false;
-  });
-
-  const [selectedCardIdForWild, setSelectedCardIdForWild] = useState<string | null>(null);
-  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-
-  // Auto-set identity
-  useEffect(() => {
-    if (inputGuestName && !currentUserId) {
-      const tempId = `usr_${Math.random().toString(36).substring(2, 9)}`;
-      setIdentity(tempId, inputGuestName);
-    }
-  }, [inputGuestName, currentUserId, setIdentity]);
+  // Bind server authenticated user identity directly to game store
+  React.useEffect(() => {
+    setIdentity(userId, userName);
+  }, [userId, userName, setIdentity]);
 
   // Initialize socket connection
   const {
@@ -79,7 +68,8 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     notifyProofUploaded,
   } = usePartySocket({
     roomCode,
-    guestName: guestName || inputGuestName || 'Pemain',
+    userId,
+    guestName: userName,
     onMessage: (event: ServerEvent) => {
       switch (event.type) {
         case 'room_update': {
@@ -125,13 +115,6 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
       }
     },
   });
-
-  const handleJoin = () => {
-    const finalName = inputGuestName.trim() || 'Pemain';
-    const tempId = `usr_${Math.random().toString(36).substring(2, 9)}`;
-    setIdentity(tempId, finalName);
-    setHasJoined(true);
-  };
 
   const handleToggleRule = (key: keyof HouseRules) => {
     const updatedRules = { ...houseRules, [key]: !houseRules[key] };
@@ -187,44 +170,7 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-md bg-zinc-950 relative overflow-hidden">
-      {!hasJoined ? (
-        /* Landing / Join View */
-        <div className="flex flex-col flex-1 bg-zinc-950 p-6 justify-center gap-8 w-full max-w-md mx-auto text-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-20 h-20 rounded-3xl bg-red-500 flex items-center justify-center border-4 border-white shadow-xl rotate-12">
-              <span className="text-white text-3xl font-black tracking-wider">T!</span>
-            </div>
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase mt-2">
-              Tumpuk!
-            </h1>
-            <p className="text-zinc-400 text-xs">
-              Main kartu real-time super seru bareng teman-temanmu secara online.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">
-                NAMA KAMU
-              </label>
-              <input
-                type="text"
-                placeholder="Masukkan namamu..."
-                value={inputGuestName}
-                onChange={(e) => setInputGuestName(e.target.value)}
-                className="h-12 w-full bg-zinc-900 border-2 border-zinc-800 rounded-xl px-4 text-white text-sm font-extrabold focus:outline-none focus:border-indigo-600"
-              />
-            </div>
-
-            <button
-              onClick={handleJoin}
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl transition-all"
-            >
-              MASUK ROOM ({roomCode})
-            </button>
-          </div>
-        </div>
-      ) : roomStatus === 'waiting' ? (
+      {roomStatus === 'waiting' ? (
         /* Lobby View */
         <LobbyView
           roomCode={roomCode}
@@ -236,7 +182,7 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
           onStartGame={startGame}
           onLeaveRoom={() => {
             leaveRoom();
-            setHasJoined(false);
+            redirect('/');
           }}
         />
       ) : roomStatus === 'playing' ? (
@@ -280,7 +226,7 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
           }}
           onLeave={() => {
             leaveRoom();
-            setHasJoined(false);
+            redirect('/');
           }}
         />
       )}
@@ -295,11 +241,25 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
   );
 }
 
-export default function RoomPage({ params }: { params: { code: string } }) {
+export default async function RoomPage({ params }: { params: { code: string } }) {
+  const session = await auth();
+
+  // Enforce mandatory Google login redirection
+  if (!session?.user) {
+    redirect('/');
+  }
+
+  const userId = session.user.id || 'usr_unknown';
+  const userName = session.user.name || 'Pemain';
+
   return (
     <GameProvider>
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-start text-white">
-        <RoomContainer roomCode={params.code || '123456'} />
+        <RoomContainer
+          roomCode={params.code || '123456'}
+          userId={userId}
+          userName={userName}
+        />
       </div>
     </GameProvider>
   );
