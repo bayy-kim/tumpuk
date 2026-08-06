@@ -241,7 +241,7 @@ function RoomContainer({ roomCode, userId, userName }: RoomContainerProps) {
   );
 }
 
-export default async function RoomPage({ params }: { params: { code: string } }) {
+export default async function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const session = await auth();
 
   // Enforce mandatory Google login redirection
@@ -249,6 +249,8 @@ export default async function RoomPage({ params }: { params: { code: string } })
     redirect('/');
   }
 
+  const resolvedParams = await params;
+  const roomCode = resolvedParams?.code || '123456';
   const userId = session.user.id || 'usr_unknown';
   const userName = session.user.name || 'Pemain';
 
@@ -256,7 +258,7 @@ export default async function RoomPage({ params }: { params: { code: string } })
     <GameProvider>
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-start text-white">
         <RoomContainer
-          roomCode={params.code || '123456'}
+          roomCode={roomCode}
           userId={userId}
           userName={userName}
         />

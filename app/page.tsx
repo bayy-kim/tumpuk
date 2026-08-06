@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { auth, signIn, signOut } from '@/lib/auth';
 import LandingHero from '@/components/landing/LandingHero';
 import LandingFeatures from '@/components/landing/LandingFeatures';
-import LandingActions from '@/components/landing/LandingActions';
 import FaqAccordion from '@/components/game/FaqAccordion';
 
 export default async function LandingPage() {
@@ -96,7 +95,12 @@ export default async function LandingPage() {
       <LandingHero
         actionForm={
           user ? (
-            <LandingActions />
+            <Link
+              href="/room"
+              className="w-full sm:w-64 h-14 bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center transition transform active:scale-95"
+            >
+              MASUK ROOM
+            </Link>
           ) : (
             <form
               action={async () => {
