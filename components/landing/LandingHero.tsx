@@ -44,11 +44,17 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
             animate={{
               opacity: 1,
               scale: 1,
-              rotate: -12,
-              x: 0,
+              rotate: [-12, 348, -12], // Putar 360 derajat bergantian
               y: [0, -6, 0],
             }}
             transition={{
+              rotate: {
+                repeat: Infinity,
+                duration: 6,
+                ease: 'easeInOut',
+                delay: 0,
+                repeatDelay: 4, // Berhenti sejenak sebelum berputar lagi
+              },
               y: { repeat: Infinity, duration: 4, ease: 'easeInOut' },
               default: { duration: 0.8, ease: 'easeOut' },
             }}
@@ -62,10 +68,17 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
             animate={{
               opacity: 1,
               scale: 1.05,
-              rotate: -2,
+              rotate: [-2, 358, -2], // Putar 360 derajat bergantian
               y: [0, -10, 0],
             }}
             transition={{
+              rotate: {
+                repeat: Infinity,
+                duration: 6,
+                ease: 'easeInOut',
+                delay: 2.5, // Bergantian (delay setelah kartu pertama berputar)
+                repeatDelay: 4,
+              },
               y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut', delay: 0.5 },
               default: { duration: 0.8, ease: 'easeOut', delay: 0.1 },
             }}
@@ -79,11 +92,17 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
             animate={{
               opacity: 1,
               scale: 1,
-              rotate: 10,
-              x: 0,
+              rotate: [10, 370, 10], // Putar 360 derajat bergantian
               y: [0, -7, 0],
             }}
             transition={{
+              rotate: {
+                repeat: Infinity,
+                duration: 6,
+                ease: 'easeInOut',
+                delay: 5, // Bergantian (delay setelah kartu kedua selesai)
+                repeatDelay: 4,
+              },
               y: { repeat: Infinity, duration: 4.2, ease: 'easeInOut', delay: 0.2 },
               default: { duration: 0.8, ease: 'easeOut' },
             }}
