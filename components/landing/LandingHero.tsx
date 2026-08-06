@@ -44,8 +44,8 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
             animate={{
               opacity: 1,
               scale: 1,
-              rotateY: [0, 360, 0], // Rotasi 3D ke samping
-              y: [0, -6, 0],
+              rotateY: [0, 360, 0],
+              y: [0, -12, 0], // Larger vertical floating offset
             }}
             transition={{
               rotateY: {
@@ -53,9 +53,13 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
                 duration: 4,
                 ease: 'easeInOut',
                 delay: 0,
-                repeatDelay: 4, // Jeda sebelum giliran berputar lagi
+                repeatDelay: 4,
               },
-              y: { repeat: Infinity, duration: 4, ease: 'easeInOut' },
+              y: { 
+                repeat: Infinity, 
+                duration: 3, 
+                ease: 'easeInOut' 
+              },
               default: { duration: 0.8, ease: 'easeOut' },
             }}
             className="w-16 h-24 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative rotate-[-12deg] [transform-style:preserve-3d]"
@@ -69,18 +73,22 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
             animate={{
               opacity: 1,
               scale: 1.05,
-              rotateY: [0, 360, 0], // Rotasi 3D ke samping
-              y: [0, -10, 0],
+              rotateY: [0, 360, 0],
+              y: [-8, 8, -8], // Symmetrical central float offset
             }}
             transition={{
               rotateY: {
                 repeat: Infinity,
                 duration: 4,
                 ease: 'easeInOut',
-                delay: 2, // Berputar bergantian setelah kartu 1 selesai
+                delay: 2,
                 repeatDelay: 4,
               },
-              y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut', delay: 0.5 },
+              y: { 
+                repeat: Infinity, 
+                duration: 3.5, 
+                ease: 'easeInOut' 
+              },
               default: { duration: 0.8, ease: 'easeOut', delay: 0.1 },
             }}
             className="w-18 h-28 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative z-10 rotate-[-2deg] [transform-style:preserve-3d]"
@@ -94,18 +102,23 @@ export default function LandingHero({ actionForm }: LandingHeroProps) {
             animate={{
               opacity: 1,
               scale: 1,
-              rotateY: [0, 360, 0], // Rotasi 3D ke samping
-              y: [0, -7, 0],
+              rotateY: [0, 360, 0],
+              y: [-12, 0, -12], // Opposing vertical float offset compared to Red card
             }}
             transition={{
               rotateY: {
                 repeat: Infinity,
                 duration: 4,
                 ease: 'easeInOut',
-                delay: 4, // Berputar bergantian setelah kartu 2 selesai
+                delay: 4,
                 repeatDelay: 4,
               },
-              y: { repeat: Infinity, duration: 4.2, ease: 'easeInOut', delay: 0.2 },
+              y: { 
+                repeat: Infinity, 
+                duration: 3, 
+                ease: 'easeInOut',
+                delay: 1.5 // Opposite phase delay
+              },
               default: { duration: 0.8, ease: 'easeOut' },
             }}
             className="w-16 h-24 rounded-xl border-2 border-white shadow-2xl overflow-hidden relative rotate-[10deg] [transform-style:preserve-3d]"

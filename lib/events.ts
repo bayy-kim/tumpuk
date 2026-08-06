@@ -55,6 +55,7 @@ export type ClientJoinRoomEvent = {
     code: string;
     userId?: string;
     guestName?: string;
+    isSpectator?: boolean;
   };
 };
 
@@ -130,7 +131,7 @@ export type ClientEvent =
 export type ServerRoomUpdateEvent = {
   type: 'room_update';
   payload: {
-    players: { id: string; name: string; connected: boolean; isHost: boolean }[];
+    players: { id: string; name: string; connected: boolean; isHost: boolean; isSpectator?: boolean }[];
     hostId: string;
     status: 'waiting' | 'playing' | 'finished';
     houseRules: HouseRules;

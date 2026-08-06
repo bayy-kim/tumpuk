@@ -1,7 +1,7 @@
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { auth, signIn, signOut } from '@/lib/auth';
+import LandingNavbar from '@/components/landing/LandingNavbar';
 import LandingHero from '@/components/landing/LandingHero';
 import LandingFeatures from '@/components/landing/LandingFeatures';
 import FaqAccordion from '@/components/game/FaqAccordion';
@@ -10,86 +10,25 @@ export default async function LandingPage() {
   const session = await auth();
   const user = session?.user;
 
+  // Wrapped Server Actions
+  const signInAction = async () => {
+    'use server';
+    await signIn('google');
+  };
+
+  const signOutAction = async () => {
+    'use server';
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col font-sans select-none relative overflow-x-hidden">
-      {/* 1. Header / Navbar */}
-      <header className="w-full bg-zinc-900/60 backdrop-blur-md border-b border-zinc-800/80 sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-xl bg-red-500 flex items-center justify-center border-2 border-white shadow rotate-6 group-hover:rotate-0 transition-transform duration-300">
-            <span className="text-white text-base font-black">T!</span>
-          </div>
-          <span className="text-xl font-black uppercase tracking-tight text-white group-hover:text-red-400 transition-colors">
-            Tumpuk!
-          </span>
-        </Link>
-
-        {/* Auth Action on Navbar */}
-        <div className="flex items-center gap-3">
-          {user ? (
-            <div className="flex items-center gap-3">
-              {/* Profile Link target */}
-              <Link
-                href="/profileuser"
-                className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
-              >
-                <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-xs font-black text-white">{user.name}</span>
-                  <span className="text-[9px] text-zinc-400 font-extrabold uppercase">Pemain</span>
-                </div>
-                {user.image ? (
-                  <div className="w-8 h-8 rounded-full border border-zinc-700 overflow-hidden relative shadow">
-                    <Image
-                      src={user.image}
-                      alt={user.name || 'User Profile'}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs">
-                    {(user.name || 'U').slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-              </Link>
-
-              <form
-                action={async () => {
-                  'use server';
-                  await signOut();
-                }}
-              >
-                <button
-                  type="submit"
-                  className="h-10 px-4 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs font-black rounded-xl border border-zinc-700 transition active:scale-95 cursor-pointer"
-                >
-                  LOGOUT
-                </button>
-              </form>
-            </div>
-          ) : (
-            <form
-              action={async () => {
-                'use server';
-                await signIn('google');
-              }}
-              className="flex gap-2"
-            >
-              <button
-                type="submit"
-                className="h-10 px-4 bg-zinc-900 border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs font-black rounded-xl transition active:scale-95 cursor-pointer"
-              >
-                MASUK
-              </button>
-              <button
-                type="submit"
-                className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition active:scale-95 cursor-pointer shadow-lg shadow-indigo-500/20"
-              >
-                DAFTAR
-              </button>
-            </form>
-          )}
-        </div>
-      </header>
+      {/* 1. Header / Navbar with scroll glass effect */}
+      <LandingNavbar
+        user={user}
+        signInAction={signInAction}
+        signOutAction={signOutAction}
+      />
 
       {/* 2. Hero Section */}
       <LandingHero
@@ -97,16 +36,13 @@ export default async function LandingPage() {
           user ? (
             <Link
               href="/room"
-              className="w-full sm:w-64 h-14 bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center transition transform active:scale-95"
+              className="w-full sm:w-64 h-14 bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center transition transform active:scale-95 cursor-pointer"
             >
               MASUK ROOM
             </Link>
           ) : (
             <form
-              action={async () => {
-                'use server';
-                await signIn('google');
-              }}
+              action={signInAction}
               className="w-full flex flex-col sm:flex-row gap-4 justify-center max-w-md"
             >
               <button

@@ -6,7 +6,7 @@ import { PublicGameState, Card, PlayerPublicState, CardColor, HouseRules } from 
 interface GameContextType {
   // States
   gameState: PublicGameState | null;
-  roomPlayers: { id: string; name: string; connected: boolean; isHost: boolean }[];
+  roomPlayers: { id: string; name: string; connected: boolean; isHost: boolean; isSpectator?: boolean }[];
   roomStatus: 'waiting' | 'playing' | 'finished';
   hostId: string | null;
   houseRules: HouseRules;
@@ -54,7 +54,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<PublicGameState | null>(null);
-  const [roomPlayers, setRoomPlayers] = useState<{ id: string; name: string; connected: boolean; isHost: boolean }[]>([]);
+  const [roomPlayers, setRoomPlayers] = useState<{ id: string; name: string; connected: boolean; isHost: boolean; isSpectator?: boolean }[]>([]);
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'playing' | 'finished'>('waiting');
   const [hostId, setHostId] = useState<string | null>(null);
   const [houseRules, setHouseRules] = useState<HouseRules>(defaultHouseRules);

@@ -50,6 +50,12 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
 
   const [selectedCardIdForWild, setSelectedCardIdForWild] = React.useState<string | null>(null);
   const [isColorPickerOpen, setIsColorPickerOpen] = React.useState(false);
+  const [isSpectator] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.sessionStorage.getItem('tumpuk_is_spectator') === 'true';
+    }
+    return false;
+  });
 
   // Bind server authenticated user identity directly to game store
   React.useEffect(() => {
@@ -71,6 +77,7 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
     roomCode,
     userId,
     guestName: userName,
+    isSpectator,
     onMessage: (event: ServerEvent) => {
       switch (event.type) {
         case 'room_update': {

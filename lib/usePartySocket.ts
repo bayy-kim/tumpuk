@@ -9,6 +9,7 @@ interface UsePartySocketOptions {
   host?: string;
   userId?: string;
   guestName?: string;
+  isSpectator?: boolean;
   onMessage?: (event: ServerEvent) => void;
 }
 
@@ -17,6 +18,7 @@ export function usePartySocket({
   host = typeof window !== 'undefined' ? window.location.host : 'localhost:1999',
   userId,
   guestName,
+  isSpectator = false,
   onMessage,
 }: UsePartySocketOptions) {
   const socketRef = useRef<PartySocket | null>(null);
@@ -50,6 +52,7 @@ export function usePartySocket({
           code: roomCode,
           userId,
           guestName,
+          isSpectator,
         },
       };
       socket.send(JSON.stringify(joinPayload));
@@ -81,7 +84,7 @@ export function usePartySocket({
       socket.close();
       socketRef.current = null;
     };
-  }, [roomCode, host, userId, guestName]);
+  }, [roomCode, host, userId, guestName, isSpectator]);
 
   // Helper function to send typed events to server
   const sendEvent = useCallback((event: ClientEvent) => {
@@ -93,10 +96,10 @@ export function usePartySocket({
   }, []);
 
   const joinRoom = useCallback(
-    (code: string, uId?: string, name?: string) => {
+    (code: string, uId?: string, name?: string, isSpectator?: boolean) => {
       sendEvent({
         type: 'join_room',
-        payload: { code, userId: uId, guestName: name },
+        payload: { code, userId: uId, guestName: name, isSpectator },
       });
     },
     [sendEvent]

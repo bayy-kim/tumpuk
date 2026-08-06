@@ -12,6 +12,7 @@ import {
 
 export interface ServerPlayerState extends PlayerState {
   isHost: boolean;
+  isSpectator?: boolean;
 }
 
 export interface ServerGameState {
@@ -128,7 +129,7 @@ export default class GameServer implements Party.Server {
 
     switch (event.type) {
       case "join_room": {
-        const { userId, guestName } = event.payload;
+        const { userId, guestName, isSpectator } = event.payload;
         const actualPlayerId = userId || senderId;
 
         if (this.disconnectTimers.has(actualPlayerId)) {
@@ -153,10 +154,12 @@ export default class GameServer implements Party.Server {
             connected: true,
             calledTumpuk: false,
             isHost,
+            isSpectator: !!isSpectator,
           };
           this.state.players.push(player);
         } else {
           player.id = actualPlayerId;
+          player.isSpectator = !!isSpectator;
           player.connected = true;
         }
 
@@ -277,7 +280,11 @@ export default class GameServer implements Party.Server {
     this.state.status = "playing";
     this.state.deck = shuffle(generateDeck());
     this.state.discardPile = [];
-    this.state.currentPlayerIndex = 0;
+    
+    // Find the first active player (non-spectator) to start the game
+    const firstActiveIndex = this.state.players.findIndex((p) => !p.isSpectator);
+    this.state.currentPlayerIndex = firstActiveIndex !== -1 ? firstActiveIndex : 0;
+    
     this.state.direction = 1;
     this.state.drawStack = 0;
     this.state.winnerId = null;
@@ -287,6 +294,7 @@ export default class GameServer implements Party.Server {
     this.state.players.forEach((player) => {
       player.hand = [];
       player.calledTumpuk = false;
+      if (player.isSpectator) return; // Skip dealing cards to spectators
       for (let i = 0; i < 7; i++) {
         const card = this.state.deck.pop();
         if (card) player.hand.push(card);
@@ -411,9 +419,18 @@ export default class GameServer implements Party.Server {
 
   advanceTurn(steps: number = 1) {
     const totalPlayers = this.state.players.length;
-    this.state.currentPlayerIndex =
-      (this.state.currentPlayerIndex + this.state.direction * steps + totalPlayers * 2) % totalPlayers;
+    if (totalPlayers === 0) return;
 
+    let nextIndex = (this.state.currentPlayerIndex + this.state.direction * steps + totalPlayers * 10) % totalPlayers;
+    
+    // Skip spectator players in the turn loop
+    let attempts = 0;
+    while (this.state.players[nextIndex]?.isSpectator && attempts < totalPlayers) {
+      nextIndex = (nextIndex + this.state.direction + totalPlayers) % totalPlayers;
+      attempts++;
+    }
+
+    this.state.currentPlayerIndex = nextIndex;
     this.resetTurnTimer();
     this.broadcastGameState();
   }

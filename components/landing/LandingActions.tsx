@@ -6,11 +6,21 @@ import { useRouter } from 'next/navigation';
 export default function LandingActions() {
   const router = useRouter();
   const [roomCode, setRoomCode] = useState('');
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState('');
 
-  const handleCreateRoom = () => {
-    // Generate a random 6-digit room code
+  const triggerCreateRoom = () => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    router.push(`/room/${code}`);
+    setGeneratedCode(code);
+    setShowRoleModal(true);
+  };
+
+  const handleRoleSelection = (isSpectator: boolean) => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('tumpuk_is_spectator', isSpectator ? 'true' : 'false');
+    }
+    setShowRoleModal(false);
+    router.push(`/room/${generatedCode}`);
   };
 
   const handleJoinRoom = (e: React.FormEvent) => {
@@ -20,11 +30,15 @@ export default function LandingActions() {
       alert('Kode room harus 6 digit angka!');
       return;
     }
+    if (typeof window !== 'undefined') {
+      // Joining players are always players, not spectator hosts
+      window.sessionStorage.setItem('tumpuk_is_spectator', 'false');
+    }
     router.push(`/room/${cleanCode}`);
   };
 
   return (
-    <div className="w-full flex flex-col gap-5 items-center justify-center max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl">
+    <div className="w-full flex flex-col gap-5 items-center justify-center max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl relative">
       <div className="flex flex-col gap-1 w-full text-center sm:text-left">
         <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">SIAP BERMAIN?</span>
         <h3 className="text-white text-base font-black uppercase">Buat atau Gabung Room</h3>
@@ -32,7 +46,7 @@ export default function LandingActions() {
 
       {/* 1. Create Room Button */}
       <button
-        onClick={handleCreateRoom}
+        onClick={triggerCreateRoom}
         className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl transition-all cursor-pointer"
       >
         Buat Room Baru
@@ -64,6 +78,41 @@ export default function LandingActions() {
           GABUNG
         </button>
       </form>
+
+      {/* Role Selection Modal Overlay */}
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-6 flex flex-col gap-5 w-full max-w-sm shadow-2xl text-center">
+            <div className="flex flex-col gap-1">
+              <span className="text-yellow-400 text-[10px] font-black uppercase tracking-wider">PILIH PERAN HOST</span>
+              <h4 className="text-white text-lg font-black uppercase">Tentukan Peranmu</h4>
+              <p className="text-zinc-400 text-xs">Apakah kamu ingin ikut bermain kartu atau memantau jalannya game saja?</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleRoleSelection(false)}
+                className="h-14 w-full bg-yellow-400 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl hover:bg-yellow-500 active:scale-95 transition-all cursor-pointer"
+              >
+                Ikut Bermain Game
+              </button>
+              <button
+                onClick={() => handleRoleSelection(true)}
+                className="h-14 w-full bg-zinc-800 border border-zinc-700 text-zinc-300 font-black text-xs uppercase tracking-wider rounded-xl hover:bg-zinc-700 active:scale-95 transition-all cursor-pointer"
+              >
+                Pantau Saja (Spektator)
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowRoleModal(false)}
+              className="text-zinc-500 hover:text-white text-[10px] font-extrabold uppercase tracking-wider mt-1 transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
