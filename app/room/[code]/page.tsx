@@ -7,7 +7,7 @@ import EndScreenView from '@/components/game/EndScreenView';
 import ColorPickerBottomSheet from '@/components/game/ColorPickerBottomSheet';
 import { GameProvider, useGameStore } from '@/lib/GameContext';
 import usePartySocket from '@/lib/usePartySocket';
-import { CardColor, ServerEvent } from '@/lib/events';
+import { CardColor, HouseRules, ServerEvent } from '@/lib/events';
 
 function RoomContainer({ roomCode }: { roomCode: string }) {
   const {
@@ -20,6 +20,11 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     scores,
     currentUserId,
     guestName,
+    loserId,
+    loserName,
+    pollDeadline,
+    winningChallenge,
+    proofUrl,
     setGameState,
     setRoomPlayers,
     setRoomStatus,
@@ -27,6 +32,9 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     setHouseRules,
     setGameOver,
     setIdentity,
+    setChallengePollStart,
+    setChallengeResult,
+    setChallengeProof,
     resetGame,
     myHand,
     opponents,
@@ -50,7 +58,7 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
   const [selectedCardIdForWild, setSelectedCardIdForWild] = useState<string | null>(null);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
 
-  // Initialize identity if guest name was stored
+  // Auto-set identity
   useEffect(() => {
     if (inputGuestName && !currentUserId) {
       const tempId = `usr_${Math.random().toString(36).substring(2, 9)}`;
@@ -66,9 +74,12 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
     callTumpuk,
     challengeTumpuk,
     leaveRoom,
+    updateHouseRules,
+    submitChallengeVote,
+    notifyProofUploaded,
   } = usePartySocket({
     roomCode,
-    guestName: guestName || inputGuestName || 'Pemain Guest',
+    guestName: guestName || inputGuestName || 'Pemain',
     onMessage: (event: ServerEvent) => {
       switch (event.type) {
         case 'room_update': {
@@ -87,12 +98,28 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
           alert(event.payload.reason);
           break;
         }
-        case 'turn_timeout': {
-          // Toast or notice handled by timer update
-          break;
-        }
         case 'game_over': {
           setGameOver(event.payload.winnerId, event.payload.scores);
+          break;
+        }
+        case 'challenge_poll_start': {
+          setChallengePollStart(
+            event.payload.loserId,
+            event.payload.loserName,
+            event.payload.pollDeadline
+          );
+          break;
+        }
+        case 'challenge_result': {
+          setChallengeResult(
+            event.payload.loserId,
+            event.payload.loserName,
+            event.payload.winningChallenge
+          );
+          break;
+        }
+        case 'challenge_uploaded': {
+          setChallengeProof(event.payload.fileUrl);
           break;
         }
       }
@@ -100,11 +127,16 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
   });
 
   const handleJoin = () => {
-    const finalName = inputGuestName.trim() || 'Pemain Guest';
-    // Generate temporary user ID for session
+    const finalName = inputGuestName.trim() || 'Pemain';
     const tempId = `usr_${Math.random().toString(36).substring(2, 9)}`;
     setIdentity(tempId, finalName);
     setHasJoined(true);
+  };
+
+  const handleToggleRule = (key: keyof HouseRules) => {
+    const updatedRules = { ...houseRules, [key]: !houseRules[key] };
+    setHouseRules(updatedRules);
+    updateHouseRules(updatedRules);
   };
 
   const handlePlayCard = (cardId: string) => {
@@ -123,6 +155,30 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
       setSelectedCardIdForWild(null);
     }
     setIsColorPickerOpen(false);
+  };
+
+  const handleUploadProof = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('roomId', roomCode);
+      formData.append('userId', currentUserId);
+
+      const res = await fetch('/api/challenge/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        notifyProofUploaded(data.url);
+      } else {
+        alert(data.error || 'Gagal mengunggah file.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal mengunggah bukti.';
+      alert(msg);
+    }
   };
 
   const activePlayer = gameState
@@ -176,7 +232,7 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
           hostId={hostId || ''}
           currentUserId={currentUserId}
           houseRules={houseRules}
-          onToggleRule={() => {}}
+          onToggleRule={handleToggleRule}
           onStartGame={startGame}
           onLeaveRoom={() => {
             leaveRoom();
@@ -211,6 +267,13 @@ function RoomContainer({ roomCode }: { roomCode: string }) {
             score: s.score,
           }))}
           currentUserId={currentUserId}
+          loserId={loserId}
+          loserName={loserName}
+          pollDeadline={pollDeadline}
+          winningChallenge={winningChallenge}
+          proofUrl={proofUrl}
+          onVoteChallenge={submitChallengeVote}
+          onUploadProof={handleUploadProof}
           onRematch={() => {
             resetGame();
             startGame();

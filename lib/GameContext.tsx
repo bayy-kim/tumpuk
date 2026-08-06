@@ -15,6 +15,13 @@ interface GameContextType {
   currentUserId: string;
   guestName: string;
 
+  // Challenge Poll States
+  loserId: string | null;
+  loserName: string | null;
+  pollDeadline: number;
+  winningChallenge: string | null;
+  proofUrl: string | null;
+
   // Actions
   setGameState: (state: PublicGameState | null) => void;
   setRoomPlayers: (players: { id: string; name: string; connected: boolean; isHost: boolean }[]) => void;
@@ -23,6 +30,9 @@ interface GameContextType {
   setHouseRules: (rules: HouseRules) => void;
   setGameOver: (winnerId: string, scores: { playerId: string; score: number }[]) => void;
   setIdentity: (userId: string, name: string) => void;
+  setChallengePollStart: (loserId: string, loserName: string, deadline: number) => void;
+  setChallengeResult: (loserId: string, loserName: string, challenge: string) => void;
+  setChallengeProof: (url: string) => void;
   resetGame: () => void;
 
   // Selectors
@@ -54,6 +64,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [guestName, setGuestName] = useState<string>('');
   const [turnSecondsLeft, setTurnSecondsLeft] = useState<number>(0);
 
+  // Poll states
+  const [loserId, setLoserId] = useState<string | null>(null);
+  const [loserName, setLoserName] = useState<string | null>(null);
+  const [pollDeadline, setPollDeadline] = useState<number>(0);
+  const [winningChallenge, setWinningChallenge] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+
   // Auto-calculate seconds remaining from turnDeadline
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -82,11 +99,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGuestName(name);
   };
 
+  const setChallengePollStart = (lId: string, lName: string, deadline: number) => {
+    setLoserId(lId);
+    setLoserName(lName);
+    setPollDeadline(deadline);
+    setWinningChallenge(null);
+    setProofUrl(null);
+  };
+
+  const setChallengeResult = (lId: string, lName: string, challenge: string) => {
+    setLoserId(lId);
+    setLoserName(lName);
+    setWinningChallenge(challenge);
+  };
+
+  const setChallengeProof = (url: string) => {
+    setProofUrl(url);
+  };
+
   const resetGame = () => {
     setGameState(null);
     setWinnerId(null);
     setScores([]);
     setRoomStatus('waiting');
+    setLoserId(null);
+    setLoserName(null);
+    setPollDeadline(0);
+    setWinningChallenge(null);
+    setProofUrl(null);
   };
 
   // Selectors
@@ -112,6 +152,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         scores,
         currentUserId,
         guestName,
+        loserId,
+        loserName,
+        pollDeadline,
+        winningChallenge,
+        proofUrl,
         setGameState,
         setRoomPlayers,
         setRoomStatus,
@@ -119,6 +164,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setHouseRules,
         setGameOver,
         setIdentity,
+        setChallengePollStart,
+        setChallengeResult,
+        setChallengeProof,
         resetGame,
         myHand,
         opponents,

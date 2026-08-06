@@ -93,6 +93,27 @@ export type ClientLeaveRoomEvent = {
   payload: Record<string, never>;
 };
 
+export type ClientUpdateHouseRulesEvent = {
+  type: 'update_house_rules';
+  payload: {
+    houseRules: HouseRules;
+  };
+};
+
+export type ClientSubmitChallengeVoteEvent = {
+  type: 'submit_challenge_vote';
+  payload: {
+    option: string; // e.g. "terigu" | "garam" | "joget" | custom string
+  };
+};
+
+export type ClientNotifyProofUploadedEvent = {
+  type: 'notify_proof_uploaded';
+  payload: {
+    fileUrl: string;
+  };
+};
+
 export type ClientEvent =
   | ClientJoinRoomEvent
   | ClientStartGameEvent
@@ -100,7 +121,10 @@ export type ClientEvent =
   | ClientDrawCardEvent
   | ClientCallTumpukEvent
   | ClientChallengeTumpukEvent
-  | ClientLeaveRoomEvent;
+  | ClientLeaveRoomEvent
+  | ClientUpdateHouseRulesEvent
+  | ClientSubmitChallengeVoteEvent
+  | ClientNotifyProofUploadedEvent;
 
 // Server -> Client Events
 export type ServerRoomUpdateEvent = {
@@ -140,9 +164,39 @@ export type ServerGameOverEvent = {
   };
 };
 
+export type ServerChallengePollStartEvent = {
+  type: 'challenge_poll_start';
+  payload: {
+    loserId: string;
+    loserName: string;
+    pollDeadline: number; // epoch ms (10 seconds timer)
+  };
+};
+
+export type ServerChallengeResultEvent = {
+  type: 'challenge_result';
+  payload: {
+    loserId: string;
+    loserName: string;
+    winningChallenge: string;
+  };
+};
+
+export type ServerChallengeUploadedEvent = {
+  type: 'challenge_uploaded';
+  payload: {
+    loserId: string;
+    loserName: string;
+    fileUrl: string;
+  };
+};
+
 export type ServerEvent =
   | ServerRoomUpdateEvent
   | ServerGameStateEvent
   | ServerInvalidMoveEvent
   | ServerTurnTimeoutEvent
-  | ServerGameOverEvent;
+  | ServerGameOverEvent
+  | ServerChallengePollStartEvent
+  | ServerChallengeResultEvent
+  | ServerChallengeUploadedEvent;

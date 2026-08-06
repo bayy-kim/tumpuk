@@ -10,7 +10,6 @@ import {
   ServerEvent,
 } from "../lib/events";
 
-// Extends in-memory states
 export interface ServerPlayerState extends PlayerState {
   isHost: boolean;
 }
@@ -28,31 +27,27 @@ export interface ServerGameState {
   status: "waiting" | "playing" | "finished";
   houseRules: HouseRules;
   winnerId: string | null;
+  loserId: string | null;
 }
 
 function generateDeck(): Card[] {
   const colors: CardColor[] = ["red", "yellow", "green", "blue"];
   const deck: Card[] = [];
 
-  // Generate color cards
   colors.forEach((color) => {
-    // 0 card
     deck.push({ id: `${color}-0`, color, type: "number", value: 0 });
 
-    // 1-9 cards (2 of each)
     for (let i = 1; i <= 9; i++) {
       deck.push({ id: `${color}-${i}-a`, color, type: "number", value: i });
       deck.push({ id: `${color}-${i}-b`, color, type: "number", value: i });
     }
 
-    // Action cards (2 of each)
     for (const type of ["skip", "reverse", "draw2"] as const) {
       deck.push({ id: `${color}-${type}-a`, color, type });
       deck.push({ id: `${color}-${type}-b`, color, type });
     }
   });
 
-  // Wild cards (4 of each)
   for (let i = 1; i <= 4; i++) {
     deck.push({ id: `wild-${i}`, color: "wild", type: "wild" });
     deck.push({ id: `wild4-${i}`, color: "wild", type: "wild4" });
@@ -73,7 +68,9 @@ function shuffle<T>(array: T[]): T[] {
 export default class GameServer implements Party.Server {
   state: ServerGameState;
   turnTimer: ReturnType<typeof setTimeout> | null = null;
+  pollTimer: ReturnType<typeof setTimeout> | null = null;
   disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  pollVotes = new Map<string, string>(); // playerId -> voted option
 
   constructor(readonly room: Party.Room) {
     this.state = {
@@ -94,6 +91,7 @@ export default class GameServer implements Party.Server {
         drawToMatch: true,
       },
       winnerId: null,
+      loserId: null,
     };
   }
 
@@ -107,7 +105,6 @@ export default class GameServer implements Party.Server {
 
     player.connected = false;
 
-    // Grace period for disconnection (60 seconds)
     const timeout = setTimeout(() => {
       this.handlePlayerExit(conn.id);
     }, 60000);
@@ -133,7 +130,6 @@ export default class GameServer implements Party.Server {
       case "join_room": {
         const { guestName } = event.payload;
 
-        // Clear disconnect timer if reconnecting
         if (this.disconnectTimers.has(senderId)) {
           clearTimeout(this.disconnectTimers.get(senderId)!);
           this.disconnectTimers.delete(senderId);
@@ -142,7 +138,6 @@ export default class GameServer implements Party.Server {
         let player = this.state.players.find((p) => p.id === senderId);
 
         if (!player) {
-          // If room is full, send invalid move
           if (this.state.players.length >= 6) {
             sender.send(JSON.stringify({ type: "invalid_move", payload: { reason: "Room penuh! Maksimal 6 pemain." } }));
             return;
@@ -170,6 +165,18 @@ export default class GameServer implements Party.Server {
         break;
       }
 
+      case "update_house_rules": {
+        const player = this.state.players.find((p) => p.id === senderId);
+        if (!player || !player.isHost) {
+          sender.send(JSON.stringify({ type: "invalid_move", payload: { reason: "Hanya host yang bisa mengubah aturan rumah!" } }));
+          return;
+        }
+
+        this.state.houseRules = { ...this.state.houseRules, ...event.payload.houseRules };
+        this.broadcastRoomUpdate();
+        break;
+      }
+
       case "start_game": {
         const player = this.state.players.find((p) => p.id === senderId);
         if (!player || !player.isHost) {
@@ -190,7 +197,6 @@ export default class GameServer implements Party.Server {
         const currentPlayer = this.state.players[this.state.currentPlayerIndex];
         const isTurn = currentPlayer && currentPlayer.id === senderId;
 
-        // Jump-in validation if rule is enabled
         const isJumpIn = this.state.houseRules.jumpIn && !isTurn && this.isValidJumpIn(event.payload.cardId, player);
 
         if (!isTurn && !isJumpIn) {
@@ -228,7 +234,6 @@ export default class GameServer implements Party.Server {
         const { targetPlayerId } = event.payload;
         const target = this.state.players.find((p) => p.id === targetPlayerId);
         if (target && target.hand.length === 1 && !target.calledTumpuk) {
-          // Penalty: Draw 2 cards
           for (let i = 0; i < 2; i++) {
             if (this.state.deck.length === 0) this.recycleDiscardPile();
             const card = this.state.deck.pop();
@@ -236,6 +241,26 @@ export default class GameServer implements Party.Server {
           }
           this.broadcastGameState();
         }
+        break;
+      }
+
+      case "submit_challenge_vote": {
+        if (this.state.status !== "finished") return;
+        this.pollVotes.set(senderId, event.payload.option);
+        break;
+      }
+
+      case "notify_proof_uploaded": {
+        const loser = this.state.players.find((p) => p.id === this.state.loserId) || { name: "Pecundang" };
+        const payload: ServerEvent = {
+          type: "challenge_uploaded",
+          payload: {
+            loserId: this.state.loserId || senderId,
+            loserName: loser.name,
+            fileUrl: event.payload.fileUrl,
+          },
+        };
+        this.room.broadcast(JSON.stringify(payload));
         break;
       }
 
@@ -254,8 +279,9 @@ export default class GameServer implements Party.Server {
     this.state.direction = 1;
     this.state.drawStack = 0;
     this.state.winnerId = null;
+    this.state.loserId = null;
+    this.pollVotes.clear();
 
-    // Distribute 7 cards to each player
     this.state.players.forEach((player) => {
       player.hand = [];
       player.calledTumpuk = false;
@@ -265,7 +291,6 @@ export default class GameServer implements Party.Server {
       }
     });
 
-    // Start discard pile with a non-wild card
     let startCard = this.state.deck.pop();
     while (startCard && (startCard.color === "wild" || startCard.type === "wild4")) {
       this.state.deck.unshift(startCard);
@@ -293,7 +318,6 @@ export default class GameServer implements Party.Server {
     const card = player.hand[cardIndex];
     const topCard = this.state.discardPile[this.state.discardPile.length - 1];
 
-    // Card matching rules validation
     const isValidMatch =
       card.color === "wild" ||
       card.type === "wild4" ||
@@ -312,36 +336,30 @@ export default class GameServer implements Party.Server {
       return;
     }
 
-    // Move card from hand to discard pile
     player.hand.splice(cardIndex, 1);
     this.state.discardPile.push(card);
     this.state.currentColor = card.color === "wild" || card.type === "wild4" ? chosenColor || "red" : card.color;
 
-    // Reset calledTumpuk if hand size goes back up or resets
     if (player.hand.length > 1) {
       player.calledTumpuk = false;
     }
 
-    // Check winner condition
     if (player.hand.length === 0) {
       this.endGame(playerId);
       return;
     }
 
-    // Stacking rules (+2/+4 stack calculations)
     if (card.type === "draw2") {
       this.state.drawStack += 2;
     } else if (card.type === "wild4") {
       this.state.drawStack += 4;
     }
 
-    // Standard card effects execution
     let skipNext = false;
     if (card.type === "skip") {
       skipNext = true;
     } else if (card.type === "reverse") {
       this.state.direction = (this.state.direction * -1) as 1 | -1;
-      // In 2 player games, reverse acts as a skip
       if (this.state.players.length === 2) {
         skipNext = true;
       }
@@ -354,7 +372,6 @@ export default class GameServer implements Party.Server {
     const player = this.state.players.find((p) => p.id === playerId);
     if (!player) return;
 
-    // Force draw from accumulation penalty stack if active
     if (this.state.drawStack > 0) {
       for (let i = 0; i < this.state.drawStack; i++) {
         if (this.state.deck.length === 0) this.recycleDiscardPile();
@@ -367,14 +384,12 @@ export default class GameServer implements Party.Server {
       return;
     }
 
-    // Default 1-card draw
     if (this.state.deck.length === 0) this.recycleDiscardPile();
     const card = this.state.deck.pop();
     if (card) {
       player.hand.push(card);
       player.calledTumpuk = false;
 
-      // Draw-to-match rule toggle validation
       const topCard = this.state.discardPile[this.state.discardPile.length - 1];
       const matches =
         card.color === "wild" ||
@@ -384,7 +399,6 @@ export default class GameServer implements Party.Server {
         (card.type === "number" && topCard.type === "number" && card.value === topCard.value);
 
       if (this.state.houseRules.drawToMatch && matches) {
-        // Allow playing draw card immediately
         this.broadcastGameState();
         return;
       }
@@ -405,7 +419,7 @@ export default class GameServer implements Party.Server {
   resetTurnTimer() {
     if (this.turnTimer) clearTimeout(this.turnTimer);
 
-    this.state.turnDeadline = Date.now() + 20000; // 20s
+    this.state.turnDeadline = Date.now() + 20000;
 
     this.turnTimer = setTimeout(() => {
       this.handleTurnTimeout();
@@ -416,10 +430,7 @@ export default class GameServer implements Party.Server {
     const activePlayer = this.state.players[this.state.currentPlayerIndex];
     if (!activePlayer) return;
 
-    // Trigger turn_timeout warning notification
     this.room.broadcast(JSON.stringify({ type: "turn_timeout", payload: { playerId: activePlayer.id } }));
-
-    // Apply auto draw & turn skipping
     this.drawCard(activePlayer.id);
   }
 
@@ -435,7 +446,6 @@ export default class GameServer implements Party.Server {
     if (!card) return false;
 
     const topCard = this.state.discardPile[this.state.discardPile.length - 1];
-    // Jump-in cards must match both type/value AND color exactly
     return (
       card.color === topCard.color &&
       card.type === topCard.type &&
@@ -450,10 +460,8 @@ export default class GameServer implements Party.Server {
     const wasActive = this.state.currentPlayerIndex === playerIndex;
     const wasHost = this.state.players[playerIndex].isHost;
 
-    // Remove player
     this.state.players.splice(playerIndex, 1);
 
-    // Promote new host if needed
     if (wasHost && this.state.players.length > 0) {
       this.state.players[0].isHost = true;
     }
@@ -464,9 +472,8 @@ export default class GameServer implements Party.Server {
       return;
     }
 
-    // Shift current index if needed
     if (wasActive && this.state.status === "playing") {
-      this.advanceTurn(0); // Recalculate turn deadline & deadline bar
+      this.advanceTurn(0);
     }
 
     this.broadcastRoomUpdate();
@@ -481,9 +488,11 @@ export default class GameServer implements Party.Server {
     this.state.status = "finished";
     this.state.winnerId = winnerId;
 
-    // Calculate score based on total remaining hand weights of other players
     let totalScore = 0;
     const finalScores: { playerId: string; score: number }[] = [];
+
+    let highestPenaltyPoints = -1;
+    let selectedLoserId = winnerId;
 
     this.state.players.forEach((player) => {
       let playerPoints = 0;
@@ -494,14 +503,22 @@ export default class GameServer implements Party.Server {
           } else if (card.type === "wild" || card.type === "wild4") {
             playerPoints += 50;
           } else {
-            playerPoints += 20; // Action cards (skip/reverse/draw2)
+            playerPoints += 20;
           }
         });
+
+        // The player with the highest penalty points is the loser
+        if (playerPoints > highestPenaltyPoints) {
+          highestPenaltyPoints = playerPoints;
+          selectedLoserId = player.id;
+        }
+
         totalScore += playerPoints;
         finalScores.push({ playerId: player.id, score: 0 });
       }
     });
 
+    this.state.loserId = selectedLoserId;
     finalScores.push({ playerId: winnerId, score: totalScore });
 
     const gameOverPayload: ServerEvent = {
@@ -513,6 +530,54 @@ export default class GameServer implements Party.Server {
     };
 
     this.room.broadcast(JSON.stringify(gameOverPayload));
+
+    // Start 10-second Challenge Poll timer
+    const loser = this.state.players.find((p) => p.id === selectedLoserId) || { id: selectedLoserId, name: "Pecundang" };
+    const pollDeadline = Date.now() + 10000;
+
+    const pollStartPayload: ServerEvent = {
+      type: "challenge_poll_start",
+      payload: {
+        loserId: loser.id,
+        loserName: loser.name,
+        pollDeadline,
+      },
+    };
+
+    this.room.broadcast(JSON.stringify(pollStartPayload));
+
+    // Schedule 10s poll calculation
+    this.pollTimer = setTimeout(() => {
+      this.resolveChallengePoll(loser.id, loser.name);
+    }, 10000);
+  }
+
+  resolveChallengePoll(loserId: string, loserName: string) {
+    const voteCounts = new Map<string, number>();
+    this.pollVotes.forEach((option) => {
+      voteCounts.set(option, (voteCounts.get(option) || 0) + 1);
+    });
+
+    let winningChallenge = "Coret muka pakai terigu"; // Fallback default
+    let maxVotes = 0;
+
+    voteCounts.forEach((count, option) => {
+      if (count > maxVotes) {
+        maxVotes = count;
+        winningChallenge = option;
+      }
+    });
+
+    const pollResultPayload: ServerEvent = {
+      type: "challenge_result",
+      payload: {
+        loserId,
+        loserName,
+        winningChallenge,
+      },
+    };
+
+    this.room.broadcast(JSON.stringify(pollResultPayload));
   }
 
   broadcastRoomUpdate() {
@@ -535,7 +600,6 @@ export default class GameServer implements Party.Server {
     this.room.broadcast(JSON.stringify(roomUpdatePayload));
   }
 
-  // Authoritative Broadcast with strict Zero Hand Leak enforcement
   broadcastGameState() {
     const topCard = this.state.discardPile[this.state.discardPile.length - 1];
 

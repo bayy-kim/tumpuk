@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import PartySocket from 'partysocket';
-import { ClientEvent, ServerEvent, CardColor } from './events';
+import { ClientEvent, ServerEvent, CardColor, HouseRules } from './events';
 
 interface UsePartySocketOptions {
   roomCode: string;
@@ -150,6 +150,36 @@ export function usePartySocket({
     });
   }, [sendEvent]);
 
+  const updateHouseRules = useCallback(
+    (houseRules: HouseRules) => {
+      sendEvent({
+        type: 'update_house_rules',
+        payload: { houseRules },
+      });
+    },
+    [sendEvent]
+  );
+
+  const submitChallengeVote = useCallback(
+    (option: string) => {
+      sendEvent({
+        type: 'submit_challenge_vote',
+        payload: { option },
+      });
+    },
+    [sendEvent]
+  );
+
+  const notifyProofUploaded = useCallback(
+    (fileUrl: string) => {
+      sendEvent({
+        type: 'notify_proof_uploaded',
+        payload: { fileUrl },
+      });
+    },
+    [sendEvent]
+  );
+
   return {
     isConnected,
     joinRoom,
@@ -159,6 +189,9 @@ export function usePartySocket({
     callTumpuk,
     challengeTumpuk,
     leaveRoom,
+    updateHouseRules,
+    submitChallengeVote,
+    notifyProofUploaded,
   };
 }
 export default usePartySocket;
