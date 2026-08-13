@@ -77,8 +77,6 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
     notifyProofUploaded,
   } = usePartySocket({
     roomCode,
-    userId,
-    userName,
     isSpectator,
     onMessage: (event: ServerEvent) => {
       switch (event.type) {

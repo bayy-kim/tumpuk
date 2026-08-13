@@ -53,8 +53,6 @@ export type ClientJoinRoomEvent = {
   type: 'join_room';
   payload: {
     code: string;
-    userId: string;
-    userName: string;
     isSpectator?: boolean;
   };
 };

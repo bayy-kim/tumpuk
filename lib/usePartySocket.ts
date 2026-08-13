@@ -7,8 +7,6 @@ import { ClientEvent, ServerEvent, CardColor, HouseRules } from './events';
 interface UsePartySocketOptions {
   roomCode: string;
   host?: string;
-  userId: string;
-  userName: string;
   isSpectator?: boolean;
   onMessage?: (event: ServerEvent) => void;
 }
@@ -16,8 +14,6 @@ interface UsePartySocketOptions {
 export function usePartySocket({
   roomCode,
   host,
-  userId,
-  userName,
   isSpectator = false,
   onMessage,
 }: UsePartySocketOptions) {
@@ -55,6 +51,20 @@ export function usePartySocket({
     const socket = new PartySocket({
       host: partyHost,
       room: roomCode,
+      query: async () => {
+        try {
+          const res = await fetch('/api/party-token');
+          if (res.status === 401) {
+            console.error('Unauthorized access to party token');
+            return {};
+          }
+          const data = await res.json();
+          return { token: data.token || '' };
+        } catch (err) {
+          console.error('Failed to retrieve party token query param:', err);
+          return {};
+        }
+      },
     });
 
     socketRef.current = socket;
@@ -66,8 +76,6 @@ export function usePartySocket({
         type: 'join_room',
         payload: {
           code: roomCode,
-          userId,
-          userName,
           isSpectator,
         },
       };
@@ -100,7 +108,7 @@ export function usePartySocket({
       socket.close();
       socketRef.current = null;
     };
-  }, [roomCode, host, userId, userName, isSpectator]);
+  }, [roomCode, host, isSpectator]);
 
   // Helper function to send typed events to server
   const sendEvent = useCallback((event: ClientEvent) => {
@@ -112,10 +120,10 @@ export function usePartySocket({
   }, []);
 
   const joinRoom = useCallback(
-    (code: string, uId: string, name: string, isSpectator?: boolean) => {
+    (code: string, isSpectator?: boolean) => {
       sendEvent({
         type: 'join_room',
-        payload: { code, userId: uId, userName: name, isSpectator },
+        payload: { code, isSpectator },
       });
     },
     [sendEvent]

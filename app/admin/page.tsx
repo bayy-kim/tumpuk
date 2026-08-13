@@ -88,12 +88,16 @@ export default async function AdminPage() {
 
     const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || 'tumpuk-party-bayy.bayy-kim.partykit.dev';
     const partyUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`;
+    const adminSecret = process.env.ADMIN_BROADCAST_SECRET || '';
 
     if (roomCode && roomCode !== 'all') {
       try {
         await fetch(`${partyUrl}/parties/tumpuk-party-bayy/${roomCode}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-secret': adminSecret,
+          },
           body: JSON.stringify({ type: 'broadcast', message }),
         });
       } catch (err) {
@@ -111,7 +115,10 @@ export default async function AdminPage() {
           try {
             await fetch(`${partyUrl}/parties/tumpuk-party-bayy/${r.code}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': adminSecret,
+              },
               body: JSON.stringify({ type: 'broadcast', message }),
             });
           } catch (err) {

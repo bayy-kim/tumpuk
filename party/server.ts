@@ -1,4 +1,5 @@
 import type * as Party from "partykit/server";
+import { jwtVerify } from "jose";
 import {
   Card,
   CardColor,
@@ -96,8 +97,39 @@ export default class GameServer implements Party.Server {
     };
   }
 
-  onConnect() {
-    // Handled in join_room message
+  async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+    const url = new URL(ctx.request.url);
+    const token = url.searchParams.get("token");
+
+    if (!token) {
+      console.warn("Connection closed: No token provided");
+      conn.close(4001, "Unauthorized: No token provided");
+      return;
+    }
+
+    const secretKey = (this.room.env.AUTH_SECRET as string) || process.env.AUTH_SECRET;
+    if (!secretKey) {
+      console.error("AUTH_SECRET is not configured on PartyKit server");
+      conn.close(4003, "Internal Server Error");
+      return;
+    }
+
+    try {
+      const secret = new TextEncoder().encode(secretKey);
+      const { payload } = await jwtVerify(token, secret);
+      
+      conn.setState({
+        userId: payload.userId as string,
+        userName: payload.userName as string,
+        verified: true,
+      });
+
+      console.log(`Connection verified for user: ${payload.userName} (${payload.userId})`);
+    } catch (err) {
+      console.warn("Connection closed: Token verification failed", err);
+      conn.close(4001, "Unauthorized: Invalid or expired token");
+      return;
+    }
   }
 
   onClose(conn: Party.Connection) {
@@ -129,8 +161,16 @@ export default class GameServer implements Party.Server {
 
     switch (event.type) {
       case "join_room": {
-        const { userId, userName, isSpectator } = event.payload;
-        const actualPlayerId = userId || senderId;
+        const state = sender.state as { userId: string; userName: string; verified: boolean } | undefined;
+        if (!state || !state.verified) {
+          sender.send(JSON.stringify({ type: "invalid_move", payload: { reason: "Koneksi tidak terautentikasi!" } }));
+          sender.close(4001, "Unauthorized");
+          return;
+        }
+
+        const { isSpectator } = event.payload;
+        const actualPlayerId = state.userId;
+        const actualUserName = state.userName;
 
         if (this.disconnectTimers.has(actualPlayerId)) {
           clearTimeout(this.disconnectTimers.get(actualPlayerId)!);
@@ -149,7 +189,7 @@ export default class GameServer implements Party.Server {
 
           player = {
             id: actualPlayerId,
-            name: userName || `Pemain ${this.state.players.length + 1}`,
+            name: actualUserName,
             hand: [],
             connected: true,
             calledTumpuk: false,
@@ -159,7 +199,7 @@ export default class GameServer implements Party.Server {
           this.state.players.push(player);
         } else {
           player.id = actualPlayerId;
-          player.name = userName || player.name;
+          player.name = actualUserName;
           player.isSpectator = !!isSpectator;
           player.connected = true;
         }
@@ -677,7 +717,28 @@ export default class GameServer implements Party.Server {
   }
 
   async onRequest(request: Party.Request): Promise<Response> {
+    const adminSecret = (this.room.env.ADMIN_BROADCAST_SECRET as string) || process.env.ADMIN_BROADCAST_SECRET;
+    const clientSecret = request.headers.get("x-admin-secret");
+
+    if (request.method === "OPTIONS") {
+      return new Response("OK", {
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, x-admin-secret",
+        },
+      });
+    }
+
     if (request.method === "POST") {
+      if (!adminSecret || clientSecret !== adminSecret) {
+        return new Response("Unauthorized", {
+          status: 401,
+          headers: { "Access-Control-Allow-Origin": "*" },
+        });
+      }
+
       try {
         const body = (await request.json()) as { type: string; message: string };
         if (body.type === "broadcast" && body.message) {
@@ -696,17 +757,6 @@ export default class GameServer implements Party.Server {
       } catch (err) {
         return new Response("Invalid request body", { status: 400 });
       }
-    }
-
-    if (request.method === "OPTIONS") {
-      return new Response("OK", {
-        status: 200,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
-      });
     }
 
     return new Response("Method not allowed", { status: 405 });
