@@ -13,7 +13,6 @@ interface GameContextType {
   winnerId: string | null;
   scores: { playerId: string; score: number }[];
   currentUserId: string;
-  guestName: string;
 
   // Challenge Poll States
   loserId: string | null;
@@ -61,7 +60,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [scores, setScores] = useState<{ playerId: string; score: number }[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [guestName, setGuestName] = useState<string>('');
   const [turnSecondsLeft, setTurnSecondsLeft] = useState<number>(0);
 
   // Poll states
@@ -96,7 +94,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const setIdentity = (userId: string, name: string) => {
     setCurrentUserId(userId);
-    setGuestName(name);
   };
 
   const setChallengePollStart = (lId: string, lName: string, deadline: number) => {
@@ -151,7 +148,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         winnerId,
         scores,
         currentUserId,
-        guestName,
         loserId,
         loserName,
         pollDeadline,
