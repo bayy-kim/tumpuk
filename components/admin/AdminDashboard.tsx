@@ -33,14 +33,38 @@ interface AdminDashboardProps {
     players: Array<{ name: string; scoreDelta: number }>;
     houseRules: { stacking: boolean; jumpIn: boolean; sevenZero: boolean; drawToMatch: boolean };
   }>;
+  rooms: Array<{
+    id: string;
+    code: string;
+    hostName: string;
+    status: 'WAITING' | 'PLAYING' | 'FINISHED';
+    createdAt: string | null;
+  }>;
+  broadcastAction: (formData: FormData) => Promise<void>;
+  renameUserAction: (userId: string, newName: string) => Promise<void>;
 }
 
-export default function AdminDashboard({ adminName, adminImage, stats, users, matches }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'matches' | 'rules'>('overview');
+export default function AdminDashboard({
+  adminName,
+  adminImage,
+  stats,
+  users,
+  matches,
+  rooms,
+  broadcastAction,
+  renameUserAction,
+}: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'matches' | 'rooms' | 'broadcast' | 'rules'>(
+    'overview'
+  );
   const [userSearch, setUserSearch] = useState('');
   const [matchSearch, setMatchSearch] = useState('');
+  const [roomSearch, setRoomSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<{ id: string; name: string } | null>(null);
+  const [newUserName, setNewUserName] = useState('');
 
   const handleRefreshData = () => {
     setIsRefreshing(true);
@@ -59,6 +83,47 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
     }, 1000);
   };
 
+  const handleBroadcastSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const msg = formData.get('message') as string;
+    if (!msg) return;
+
+    setIsBroadcasting(true);
+    try {
+      await broadcastAction(formData);
+      setActionMessage('Pesan broadcast berhasil dikirim!');
+      const textarea = e.currentTarget.querySelector('textarea');
+      if (textarea) textarea.value = '';
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setActionMessage('Gagal mengirim broadcast.');
+      setTimeout(() => setActionMessage(null), 3000);
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  const handleRenameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser || !newUserName.trim()) return;
+
+    try {
+      await renameUserAction(editingUser.id, newUserName.trim());
+      setActionMessage(`Nama pemain berhasil diubah menjadi ${newUserName.trim()}!`);
+      const userObj = users.find((u) => u.id === editingUser.id);
+      if (userObj) userObj.name = newUserName.trim();
+      setEditingUser(null);
+      setNewUserName('');
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setActionMessage('Gagal mengubah nama pemain.');
+      setTimeout(() => setActionMessage(null), 3000);
+    }
+  };
+
   // Search filters
   const filteredUsers = users.filter((u) =>
     (u.name + ' ' + (u.email || '')).toLowerCase().includes(userSearch.toLowerCase())
@@ -66,6 +131,10 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
 
   const filteredMatches = matches.filter((m) =>
     (m.roomCode + ' ' + m.winnerName).toLowerCase().includes(matchSearch.toLowerCase())
+  );
+
+  const filteredRooms = rooms.filter((r) =>
+    (r.code + ' ' + r.hostName + ' ' + r.status).toLowerCase().includes(roomSearch.toLowerCase())
   );
 
   // House rules usage stats
@@ -165,8 +234,8 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
 
         {/* Tab Navigation (Fluid Glass Pill) */}
         <div className="flex justify-center w-full">
-          <div className="p-1 bg-zinc-950 border border-zinc-900 rounded-full flex items-center gap-1 shadow-lg">
-            {(['overview', 'users', 'matches', 'rules'] as const).map((tab) => (
+          <div className="p-1 bg-zinc-950 border border-zinc-900 rounded-full flex items-center gap-1 shadow-lg overflow-x-auto max-w-full">
+            {(['overview', 'users', 'matches', 'rooms', 'broadcast', 'rules'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -389,7 +458,7 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
                               Tidak ada pemain ditemukan
                             </td>
                           </tr>
-                        ) : (
+                         ) : (
                           filteredUsers.map((u) => (
                             <tr key={u.id} className="hover:bg-zinc-900/30 transition-colors duration-200">
                               <td className="py-3.5 px-4 font-black text-white flex items-center gap-3">
@@ -402,7 +471,20 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
                                     {u.name.slice(0, 2).toUpperCase()}
                                   </div>
                                 )}
-                                <span>{u.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span>{u.name}</span>
+                                  <button
+                                    onClick={() => {
+                                      setEditingUser({ id: u.id, name: u.name });
+                                      setNewUserName(u.name);
+                                    }}
+                                    className="text-zinc-500 hover:text-yellow-400 p-1 cursor-pointer transition-colors"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </td>
                               <td className="py-3.5 px-4 text-zinc-400 font-medium">{u.email || '-'}</td>
                               <td className="py-3.5 px-4">
@@ -499,6 +581,130 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
               </div>
             )}
 
+            {activeTab === 'rooms' && (
+              <div className="bg-zinc-900/35 border border-zinc-800/60 rounded-3xl p-1 shadow-2xl">
+                <div className="p-6 rounded-[calc(1.5rem+0.25rem)] bg-zinc-950/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] flex flex-col gap-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-red-400 text-[10px] font-black uppercase tracking-wider">ROOMS INSPECTOR</span>
+                      <h3 className="text-white text-base font-black uppercase">Live Rooms</h3>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Cari kode room atau host..."
+                      value={roomSearch}
+                      onChange={(e) => setRoomSearch(e.target.value)}
+                      className="h-10 bg-zinc-950 border border-zinc-800 rounded-full px-4 text-xs text-white focus:outline-none focus:border-yellow-400 w-full sm:w-64 transition-colors"
+                    />
+                  </div>
+
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-zinc-800 text-zinc-500 uppercase font-black tracking-wider text-[10px]">
+                          <th className="py-3 px-4">Room Code</th>
+                          <th className="py-3 px-4">Host</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4">Dibuat Pada</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-900 font-sans">
+                        {filteredRooms.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-zinc-500 uppercase font-black">
+                              Tidak ada room aktif
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredRooms.map((r) => (
+                            <tr key={r.id} className="hover:bg-zinc-900/30 transition-colors duration-200">
+                              <td className="py-3.5 px-4 font-black text-white">#{r.code}</td>
+                              <td className="py-3.5 px-4 font-extrabold text-zinc-300">{r.hostName}</td>
+                              <td className="py-3.5 px-4">
+                                <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md border ${
+                                  r.status === 'PLAYING'
+                                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                    : r.status === 'WAITING'
+                                    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                    : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                }`}>
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-zinc-500 font-semibold">
+                                {r.createdAt ? new Date(r.createdAt).toLocaleString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                }) : '-'}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'broadcast' && (
+              <div className="bg-zinc-900/35 border border-zinc-800/60 rounded-3xl p-1 shadow-2xl text-left">
+                <div className="p-6 rounded-[calc(1.5rem+0.25rem)] bg-zinc-950/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] flex flex-col gap-6">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-yellow-400 text-[10px] font-black uppercase tracking-wider">BROADCAST UTAMA</span>
+                    <h3 className="text-white text-base font-black uppercase">Kirim Pengumuman Real-time</h3>
+                  </div>
+
+                  <form onSubmit={handleBroadcastSubmit} className="flex flex-col gap-5 max-w-xl">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] text-zinc-500 font-black uppercase tracking-wider">Target Room</label>
+                      <select
+                        name="roomCode"
+                        className="h-12 w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-white text-xs font-black uppercase tracking-wide focus:outline-none focus:border-yellow-400 cursor-pointer"
+                      >
+                        <option value="all">KIRIM KE SEMUA ROOM YANG AKTIF</option>
+                        {rooms.filter(r => r.status !== 'FINISHED').map(r => (
+                          <option key={r.id} value={r.code}>ROOM #{r.code} (HOST: {r.hostName})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] text-zinc-500 font-black uppercase tracking-wider">Isi Pengumuman</label>
+                      <textarea
+                        name="message"
+                        required
+                        rows={4}
+                        placeholder="Ketik pengumuman di sini... (Contoh: Server akan dimaintenance dalam 10 menit!)"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-white text-xs font-extrabold tracking-wide focus:outline-none focus:border-yellow-400 resize-none font-sans"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isBroadcasting}
+                      className="h-12 w-48 bg-yellow-400 hover:bg-yellow-500 active:scale-[0.98] disabled:opacity-50 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isBroadcasting ? (
+                        <>
+                          <svg className="animate-spin w-4 h-4 text-zinc-950" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          MENGIRIM...
+                        </>
+                      ) : (
+                        'KIRIM SEKARANG'
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'rules' && (
               <div className="bg-zinc-900/35 border border-zinc-800/60 rounded-3xl p-1 shadow-2xl text-left">
                 <div className="p-6 rounded-[calc(1.5rem+0.25rem)] bg-zinc-950/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] flex flex-col gap-6">
@@ -558,6 +764,49 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Rename Modal Overlay */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-6 flex flex-col gap-5 w-full max-w-sm shadow-2xl text-center">
+            <div className="flex flex-col gap-1">
+              <span className="text-yellow-400 text-[10px] font-black uppercase tracking-wider">MODERASI PEMAIN</span>
+              <h4 className="text-white text-lg font-black uppercase font-sans">Ubah Nama Pemain</h4>
+              <p className="text-zinc-400 text-xs font-sans">Ubah nama untuk user {editingUser.name}</p>
+            </div>
+
+            <form onSubmit={handleRenameSubmit} className="flex flex-col gap-4 text-left">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-zinc-400 font-black uppercase tracking-wider">Nama Baru</label>
+                <input
+                  type="text"
+                  required
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  className="h-12 w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-white text-sm font-sans focus:outline-none focus:border-yellow-400"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="h-12 w-full bg-yellow-400 hover:bg-yellow-500 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition transform active:scale-95 cursor-pointer mt-2"
+              >
+                SIMPAN PERUBAHAN
+              </button>
+            </form>
+
+            <button
+              onClick={() => {
+                setEditingUser(null);
+                setNewUserName('');
+              }}
+              className="text-zinc-500 hover:text-white text-[10px] font-extrabold uppercase tracking-wider mt-1 transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

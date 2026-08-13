@@ -44,7 +44,7 @@ export function usePartySocket({
       if (isLocalhost) {
         partyHost = 'localhost:1999';
       } else {
-        partyHost = 'tumpuk-party.bayy-kim.partykit.dev';
+        partyHost = 'tumpuk-party-bayy.bayy-kim.partykit.dev';
       }
     }
 

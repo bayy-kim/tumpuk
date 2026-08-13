@@ -9,6 +9,7 @@ import ColorPickerBottomSheet from '@/components/game/ColorPickerBottomSheet';
 import { useGameStore } from '@/lib/GameContext';
 import usePartySocket from '@/lib/usePartySocket';
 import { CardColor, HouseRules, ServerEvent } from '@/lib/events';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RoomContainerProps {
   roomCode: string;
@@ -50,6 +51,7 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
 
   const [selectedCardIdForWild, setSelectedCardIdForWild] = React.useState<string | null>(null);
   const [isColorPickerOpen, setIsColorPickerOpen] = React.useState(false);
+  const [adminBroadcast, setAdminBroadcast] = React.useState<string | null>(null);
   const [isSpectator] = React.useState(() => {
     if (typeof window !== 'undefined') {
       return window.sessionStorage.getItem('tumpuk_is_spectator') === 'true';
@@ -118,6 +120,13 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
         }
         case 'challenge_uploaded': {
           setChallengeProof(event.payload.fileUrl);
+          break;
+        }
+        case 'admin_broadcast': {
+          setAdminBroadcast(event.payload.message);
+          setTimeout(() => {
+            setAdminBroadcast(null);
+          }, 10000);
           break;
         }
       }
@@ -239,6 +248,28 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
           }}
         />
       )}
+
+      {/* Admin Broadcast Banner */}
+      <AnimatePresence>
+        {adminBroadcast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="absolute top-2 left-2 right-2 z-50 p-3 bg-red-950/90 backdrop-blur border-2 border-red-500 rounded-2xl flex items-center gap-3 shadow-2xl"
+          >
+            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shrink-0 animate-pulse text-white">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] text-red-400 font-black uppercase tracking-wider">PENGUMUMAN ADMIN</span>
+              <p className="text-white text-xs font-extrabold tracking-wide">{adminBroadcast}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Wild color picker overlay */}
       <ColorPickerBottomSheet

@@ -675,4 +675,40 @@ export default class GameServer implements Party.Server {
       conn.send(JSON.stringify(gameStatePayload));
     });
   }
+
+  async onRequest(request: Party.Request): Promise<Response> {
+    if (request.method === "POST") {
+      try {
+        const body = (await request.json()) as { type: string; message: string };
+        if (body.type === "broadcast" && body.message) {
+          const payload: ServerEvent = {
+            type: "admin_broadcast",
+            payload: {
+              message: body.message,
+            },
+          };
+          this.room.broadcast(JSON.stringify(payload));
+          return new Response("Broadcast sent", {
+            status: 200,
+            headers: { "Access-Control-Allow-Origin": "*" },
+          });
+        }
+      } catch (err) {
+        return new Response("Invalid request body", { status: 400 });
+      }
+    }
+
+    if (request.method === "OPTIONS") {
+      return new Response("OK", {
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
+
+    return new Response("Method not allowed", { status: 405 });
+  }
 }

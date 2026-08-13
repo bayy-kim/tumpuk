@@ -37,6 +37,13 @@ export default async function AdminPage() {
     },
   });
 
+  const rooms = await prisma.room.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      host: true,
+    },
+  });
+
   const serializeDate = (date: Date | null) => (date ? date.toISOString() : null);
 
   const serializedUsers = users.map((u) => ({
@@ -64,6 +71,66 @@ export default async function AdminPage() {
     houseRules: m.room.houseRules as any,
   }));
 
+  const serializedRooms = rooms.map((r) => ({
+    id: r.id,
+    code: r.code,
+    hostName: r.host.name,
+    status: r.status,
+    createdAt: serializeDate(r.createdAt),
+  }));
+
+  const broadcastAction = async (formData: FormData) => {
+    'use server';
+    const message = formData.get('message') as string;
+    const roomCode = formData.get('roomCode') as string;
+    
+    if (!message) return;
+
+    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || 'tumpuk-party-bayy.bayy-kim.partykit.dev';
+    const partyUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`;
+
+    if (roomCode && roomCode !== 'all') {
+      try {
+        await fetch(`${partyUrl}/parties/tumpuk-party-bayy/${roomCode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'broadcast', message }),
+        });
+      } catch (err) {
+        console.error(`Failed to send broadcast to room ${roomCode}:`, err);
+      }
+    } else {
+      const activeRooms = await prisma.room.findMany({
+        where: {
+          status: { in: ['WAITING', 'PLAYING'] },
+        },
+      });
+
+      await Promise.all(
+        activeRooms.map(async (r) => {
+          try {
+            await fetch(`${partyUrl}/parties/tumpuk-party-bayy/${r.code}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'broadcast', message }),
+            });
+          } catch (err) {
+            console.error(`Failed to send broadcast to room ${r.code}:`, err);
+          }
+        })
+      );
+    }
+  };
+
+  const renameUserAction = async (userId: string, newName: string) => {
+    'use server';
+    if (!userId || !newName) return;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { name: newName },
+    });
+  };
+
   return (
     <AdminDashboard
       adminName={session.user.name || 'Admin'}
@@ -75,6 +142,9 @@ export default async function AdminPage() {
       }}
       users={serializedUsers}
       matches={serializedMatches}
+      rooms={serializedRooms}
+      broadcastAction={broadcastAction}
+      renameUserAction={renameUserAction}
     />
   );
 }

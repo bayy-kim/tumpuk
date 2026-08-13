@@ -192,6 +192,13 @@ export type ServerChallengeUploadedEvent = {
   };
 };
 
+export type ServerAdminBroadcastEvent = {
+  type: 'admin_broadcast';
+  payload: {
+    message: string;
+  };
+};
+
 export type ServerEvent =
   | ServerRoomUpdateEvent
   | ServerGameStateEvent
@@ -200,4 +207,5 @@ export type ServerEvent =
   | ServerGameOverEvent
   | ServerChallengePollStartEvent
   | ServerChallengeResultEvent
-  | ServerChallengeUploadedEvent;
+  | ServerChallengeUploadedEvent
+  | ServerAdminBroadcastEvent;
