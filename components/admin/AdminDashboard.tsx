@@ -135,6 +135,8 @@ export default function AdminDashboard({ adminName, adminImage, stats, users, ma
               </div>
               <Link
                 href="/room"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-10 px-5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-black rounded-full flex items-center transition-all duration-300"
               >
                 MASUK LOBBY &rarr;
