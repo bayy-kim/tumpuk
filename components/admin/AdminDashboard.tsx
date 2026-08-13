@@ -42,6 +42,7 @@ interface AdminDashboardProps {
   }>;
   broadcastAction: (formData: FormData) => Promise<void>;
   renameUserAction: (userId: string, newName: string) => Promise<void>;
+  forceEndRoomAction: (roomCode: string) => Promise<void>;
 }
 
 export default function AdminDashboard({
@@ -53,6 +54,7 @@ export default function AdminDashboard({
   rooms,
   broadcastAction,
   renameUserAction,
+  forceEndRoomAction,
 }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'matches' | 'rooms' | 'broadcast' | 'rules'>(
     'overview'
@@ -65,6 +67,27 @@ export default function AdminDashboard({
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<{ id: string; name: string } | null>(null);
   const [newUserName, setNewUserName] = useState('');
+  const [endingRoomCode, setEndingRoomCode] = useState<string | null>(null);
+
+  const handleForceEndRoom = async (roomCode: string) => {
+    if (!confirm(`Apakah Anda yakin ingin memaksa mengakhiri room #${roomCode}?`)) {
+      return;
+    }
+    setEndingRoomCode(roomCode);
+    try {
+      await forceEndRoomAction(roomCode);
+      setActionMessage(`Room #${roomCode} berhasil diakhiri paksa!`);
+      const roomObj = rooms.find((r) => r.code === roomCode);
+      if (roomObj) roomObj.status = 'FINISHED';
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setActionMessage(`Gagal mengakhiri room #${roomCode}.`);
+      setTimeout(() => setActionMessage(null), 3000);
+    } finally {
+      setEndingRoomCode(null);
+    }
+  };
 
   const handleRefreshData = () => {
     setIsRefreshing(true);
@@ -606,12 +629,13 @@ export default function AdminDashboard({
                           <th className="py-3 px-4">Host</th>
                           <th className="py-3 px-4">Status</th>
                           <th className="py-3 px-4">Dibuat Pada</th>
+                          <th className="py-3 px-4 text-right">Aksi</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-900 font-sans">
                         {filteredRooms.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="py-8 text-center text-zinc-500 uppercase font-black">
+                            <td colSpan={5} className="py-8 text-center text-zinc-500 uppercase font-black">
                               Tidak ada room aktif
                             </td>
                           </tr>
@@ -639,6 +663,19 @@ export default function AdminDashboard({
                                   hour: '2-digit',
                                   minute: '2-digit',
                                 }) : '-'}
+                              </td>
+                              <td className="py-3.5 px-4 text-right pr-6">
+                                {r.status !== 'FINISHED' ? (
+                                  <button
+                                    onClick={() => handleForceEndRoom(r.code)}
+                                    disabled={endingRoomCode === r.code}
+                                    className="bg-red-950 hover:bg-red-900 border border-red-800 text-red-200 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition duration-200 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {endingRoomCode === r.code ? 'Memproses...' : 'Paksa Akhiri'}
+                                  </button>
+                                ) : (
+                                  <span className="text-zinc-600 text-[10px] font-bold uppercase">Selesai</span>
+                                )}
                               </td>
                             </tr>
                           ))

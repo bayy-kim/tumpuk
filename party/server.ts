@@ -595,9 +595,13 @@ export default class GameServer implements Party.Server {
 
     // Save match result to Postgres DB using HTTP fetch callback
     const hostUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tumpuk.vercel.app";
+    const adminSecret = (this.room.env.ADMIN_BROADCAST_SECRET as string) || process.env.ADMIN_BROADCAST_SECRET || "";
     fetch(`${hostUrl}/api/match/record`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-secret": adminSecret,
+      },
       body: JSON.stringify({
         roomId: this.state.roomId,
         winnerId,
@@ -740,7 +744,7 @@ export default class GameServer implements Party.Server {
       }
 
       try {
-        const body = (await request.json()) as { type: string; message: string };
+        const body = (await request.json()) as { type: string; message?: string };
         if (body.type === "broadcast" && body.message) {
           const payload: ServerEvent = {
             type: "admin_broadcast",
@@ -750,6 +754,54 @@ export default class GameServer implements Party.Server {
           };
           this.room.broadcast(JSON.stringify(payload));
           return new Response("Broadcast sent", {
+            status: 200,
+            headers: { "Access-Control-Allow-Origin": "*" },
+          });
+        }
+
+        if (body.type === "force_end") {
+          if (this.turnTimer) clearTimeout(this.turnTimer);
+          if (this.pollTimer) clearTimeout(this.pollTimer);
+
+          const alertPayload: ServerEvent = {
+            type: "admin_broadcast",
+            payload: {
+              message: "Pertandingan ini diakhiri paksa oleh administrator.",
+            },
+          };
+          this.room.broadcast(JSON.stringify(alertPayload));
+
+          const gameOverPayload: ServerEvent = {
+            type: "game_over",
+            payload: {
+              winnerId: "system",
+              scores: this.state.players.map((p) => ({ playerId: p.id, score: 0 })),
+            },
+          };
+          this.room.broadcast(JSON.stringify(gameOverPayload));
+
+          this.state.status = "finished";
+          this.state.winnerId = null;
+          this.state.loserId = null;
+          this.state.drawStack = 0;
+          this.pollVotes.clear();
+
+          const hostUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tumpuk.vercel.app";
+          fetch(`${hostUrl}/api/match/record`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-secret": adminSecret || "",
+            },
+            body: JSON.stringify({
+              roomId: this.state.roomId,
+              winnerId: "system",
+              scores: this.state.players.map((p) => ({ playerId: p.id, score: 0 })),
+              houseRules: this.state.houseRules,
+            }),
+          }).catch((e) => console.error("Failed to persist match record to Postgres:", e));
+
+          return new Response("Room force-ended successfully", {
             status: 200,
             headers: { "Access-Control-Allow-Origin": "*" },
           });

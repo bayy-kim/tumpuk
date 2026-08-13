@@ -138,6 +138,34 @@ export default async function AdminPage() {
     });
   };
 
+  const forceEndRoomAction = async (roomCode: string) => {
+    'use server';
+    if (!roomCode) return;
+
+    const host = process.env.NEXT_PUBLIC_PARTYKIT_HOST || 'tumpuk-party-bayy.bayy-kim.partykit.dev';
+    const partyUrl = host.startsWith('localhost') ? `http://${host}` : `https://${host}`;
+    const adminSecret = process.env.ADMIN_BROADCAST_SECRET || '';
+
+    try {
+      await fetch(`${partyUrl}/parties/tumpuk-party-bayy/${roomCode}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': adminSecret,
+        },
+        body: JSON.stringify({ type: 'force_end' }),
+      });
+
+      await prisma.room.update({
+        where: { code: roomCode },
+        data: { status: 'FINISHED' },
+      });
+    } catch (err) {
+      console.error(`Failed to force-end room ${roomCode}:`, err);
+      throw err;
+    }
+  };
+
   return (
     <AdminDashboard
       adminName={session.user.name || 'Admin'}
@@ -152,6 +180,7 @@ export default async function AdminPage() {
       rooms={serializedRooms}
       broadcastAction={broadcastAction}
       renameUserAction={renameUserAction}
+      forceEndRoomAction={forceEndRoomAction}
     />
   );
 }

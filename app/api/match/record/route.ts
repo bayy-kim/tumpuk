@@ -5,7 +5,12 @@ import { auth } from '@/lib/auth';
 export async function POST(request: Request) {
   try {
     const session = await auth();
-    if (!session?.user) {
+    const adminSecret = process.env.ADMIN_BROADCAST_SECRET;
+    const clientSecret = request.headers.get("x-admin-secret");
+
+    const isAuthorized = !!session?.user || (!!adminSecret && clientSecret === adminSecret);
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
