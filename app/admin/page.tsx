@@ -7,8 +7,8 @@ import AdminDashboard from '@/components/admin/AdminDashboard';
 export default async function AdminPage() {
   const session = await auth();
 
-  // Guard: Only muhamadaibayu@gmail.com is allowed to access
-  if (!session?.user || session.user.email !== 'muhamadaibayu@gmail.com') {
+  // Guard: Only ADMIN role is allowed to access
+  if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/');
   }
 

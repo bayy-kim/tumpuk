@@ -6,12 +6,18 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id          String        @id @default(uuid())
   name        String
   avatarUrl   String?
   email       String?       @unique
   provider    String
+  role        Role          @default(USER)
   createdAt   DateTime      @default(now())
   wonMatches  Match[]       @relation("WonMatches")
   matches     MatchPlayer[]
