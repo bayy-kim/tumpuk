@@ -1,4 +1,5 @@
 {
-  "name": "tumpuk-party",
-  "main": "party/server.ts"
+  "name": "tumpuk-party-bayy",
+  "main": "party/server.ts",
+  "compatibilityDate": "2026-08-06"
 }

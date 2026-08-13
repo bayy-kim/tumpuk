@@ -7,8 +7,8 @@ import { ClientEvent, ServerEvent, CardColor, HouseRules } from './events';
 interface UsePartySocketOptions {
   roomCode: string;
   host?: string;
-  userId?: string;
-  guestName?: string;
+  userId: string;
+  userName: string;
   isSpectator?: boolean;
   onMessage?: (event: ServerEvent) => void;
 }
@@ -17,7 +17,7 @@ export function usePartySocket({
   roomCode,
   host,
   userId,
-  guestName,
+  userName,
   isSpectator = false,
   onMessage,
 }: UsePartySocketOptions) {
@@ -67,7 +67,7 @@ export function usePartySocket({
         payload: {
           code: roomCode,
           userId,
-          guestName,
+          userName,
           isSpectator,
         },
       };
@@ -100,7 +100,7 @@ export function usePartySocket({
       socket.close();
       socketRef.current = null;
     };
-  }, [roomCode, host, userId, guestName, isSpectator]);
+  }, [roomCode, host, userId, userName, isSpectator]);
 
   // Helper function to send typed events to server
   const sendEvent = useCallback((event: ClientEvent) => {
@@ -112,10 +112,10 @@ export function usePartySocket({
   }, []);
 
   const joinRoom = useCallback(
-    (code: string, uId?: string, name?: string, isSpectator?: boolean) => {
+    (code: string, uId: string, name: string, isSpectator?: boolean) => {
       sendEvent({
         type: 'join_room',
-        payload: { code, userId: uId, guestName: name, isSpectator },
+        payload: { code, userId: uId, userName: name, isSpectator },
       });
     },
     [sendEvent]

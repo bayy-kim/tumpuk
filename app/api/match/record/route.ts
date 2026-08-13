@@ -34,10 +34,8 @@ export async function POST(request: Request) {
       await prisma.matchPlayer.createMany({
         data: scores.map((scoreItem: { playerId: string; score: number }, index: number) => ({
           matchId: match.id,
-          userId: scoreItem.playerId.startsWith('usr_') || scoreItem.playerId.includes('-')
-            ? scoreItem.playerId
-            : null, // Only bind if valid google UUID/userId format
-          guestName: scoreItem.playerId.startsWith('usr_') ? null : scoreItem.playerId,
+          userId: scoreItem.playerId !== 'system' ? scoreItem.playerId : null,
+          guestName: null,
           finalHandSize: scoreItem.score > 0 ? 0 : 7, // Placeholder logic
           scoreDelta: scoreItem.score,
           seatIndex: index,

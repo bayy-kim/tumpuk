@@ -5,6 +5,7 @@ import LandingNavbar from '@/components/landing/LandingNavbar';
 import LandingHero from '@/components/landing/LandingHero';
 import LandingFeatures from '@/components/landing/LandingFeatures';
 import FaqAccordion from '@/components/game/FaqAccordion';
+import LandingAuthButtons from '@/components/landing/LandingAuthButtons';
 
 export default async function LandingPage() {
   const session = await auth();
@@ -19,6 +20,13 @@ export default async function LandingPage() {
   const signOutAction = async () => {
     'use server';
     await signOut();
+  };
+
+  const signInAdminAction = async (formData: FormData) => {
+    'use server';
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    await signIn('credentials', { email, password, redirectTo: '/room' });
   };
 
   return (
@@ -41,23 +49,10 @@ export default async function LandingPage() {
               MASUK ROOM
             </Link>
           ) : (
-            <form
-              action={signInAction}
-              className="w-full flex flex-col sm:flex-row gap-4 justify-center max-w-md"
-            >
-              <button
-                type="submit"
-                className="w-full sm:w-56 h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl transition transform active:scale-95 cursor-pointer"
-              >
-                MAIN SEKARANG
-              </button>
-              <button
-                type="submit"
-                className="w-full sm:w-56 h-14 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 font-extrabold text-sm uppercase tracking-wider rounded-2xl shadow-lg transition transform active:scale-95 cursor-pointer"
-              >
-                DAFTAR AKUN
-              </button>
-            </form>
+            <LandingAuthButtons
+              signInAction={signInAction}
+              signInAdminAction={signInAdminAction}
+            />
           )
         }
       />

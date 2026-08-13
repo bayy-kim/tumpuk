@@ -76,7 +76,7 @@ export default function RoomContainer({ roomCode, userId, userName }: RoomContai
   } = usePartySocket({
     roomCode,
     userId,
-    guestName: userName,
+    userName,
     isSpectator,
     onMessage: (event: ServerEvent) => {
       switch (event.type) {
